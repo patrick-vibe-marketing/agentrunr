@@ -42,6 +42,9 @@ class ChatControllerTest {
     @MockBean
     private io.agentrunr.memory.SQLiteMemoryStore sqliteMemory;
 
+    @MockBean
+    private io.agentrunr.memory.MemoryAutoSaver memoryAutoSaver;
+
     @Test
     void shouldReturnHealthStatus() throws Exception {
         mockMvc.perform(get("/api/health"))

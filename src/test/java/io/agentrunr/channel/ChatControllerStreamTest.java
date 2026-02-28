@@ -43,6 +43,9 @@ class ChatControllerStreamTest {
     @MockBean
     private io.agentrunr.memory.SQLiteMemoryStore sqliteMemory;
 
+    @MockBean
+    private io.agentrunr.memory.MemoryAutoSaver memoryAutoSaver;
+
     @Test
     void shouldReturnStreamingResponse() throws Exception {
         var agent = new Agent("Assistant", "You are helpful.");

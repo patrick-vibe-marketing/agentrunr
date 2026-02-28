@@ -2,6 +2,7 @@ package io.agentrunr.channel;
 
 import io.agentrunr.core.*;
 import io.agentrunr.memory.FileMemoryStore;
+import io.agentrunr.memory.MemoryAutoSaver;
 import io.agentrunr.memory.SQLiteMemoryStore;
 import io.agentrunr.security.InputSanitizer;
 import org.springframework.http.MediaType;
@@ -27,15 +28,17 @@ public class ChatController {
     private final InputSanitizer inputSanitizer;
     private final FileMemoryStore memoryStore;
     private final SQLiteMemoryStore sqliteMemory;
+    private final MemoryAutoSaver memoryAutoSaver;
 
     public ChatController(AgentRunner agentRunner, AgentConfigurer agentConfigurer,
                           InputSanitizer inputSanitizer, FileMemoryStore memoryStore,
-                          SQLiteMemoryStore sqliteMemory) {
+                          SQLiteMemoryStore sqliteMemory, MemoryAutoSaver memoryAutoSaver) {
         this.agentRunner = agentRunner;
         this.agentConfigurer = agentConfigurer;
         this.inputSanitizer = inputSanitizer;
         this.memoryStore = memoryStore;
         this.sqliteMemory = sqliteMemory;
+        this.memoryAutoSaver = memoryAutoSaver;
     }
 
     /**
@@ -70,6 +73,8 @@ public class ChatController {
             if (lastUser.role() == ChatMessage.Role.USER) {
                 memoryStore.appendMessage(sessionId, "user", lastUser.content());
                 sqliteMemory.storeConversationMessage(sessionId, "user", lastUser.content());
+                // Auto-save important facts from user messages
+                memoryAutoSaver.scanAndSave(lastUser.content(), sessionId);
             }
         }
 
@@ -127,6 +132,7 @@ public class ChatController {
             if (lastUser.role() == ChatMessage.Role.USER) {
                 memoryStore.appendMessage(sessionId, "user", lastUser.content());
                 sqliteMemory.storeConversationMessage(sessionId, "user", lastUser.content());
+                memoryAutoSaver.scanAndSave(lastUser.content(), sessionId);
             }
         }
 
