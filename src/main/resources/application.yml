@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: jobrunr-agent
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:sk-placeholder}
+      chat:
+        options:
+          model: gpt-4o
+
+# Agent configuration
+agent:
+  name: Assistant
+  model: gpt-4o
+  instructions: >
+    You are a helpful AI assistant powered by JobRunr Agent.
+    You can use tools to help users accomplish tasks.
+    Be concise and helpful.
+
+# JobRunr configuration
+org:
+  jobrunr:
+    background-job-server:
+      enabled: true
+    dashboard:
+      enabled: true
+      port: 8000
+    database:
+      type: sql
+      datasource:
+    misc:
+      allow-anonymous-data-usage: false
+
+# Server
+server:
+  port: 8080
+
+# Logging
+logging:
+  level:
+    io.jobrunr.agent: DEBUG
+    org.springframework.ai: INFO
