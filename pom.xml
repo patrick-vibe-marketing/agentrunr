@@ -49,7 +49,7 @@
         <dependency>
             <groupId>org.jobrunr</groupId>
             <artifactId>jobrunr-spring-boot-3-starter</artifactId>
-            <version>7.3.2</version>
+            <version>8.4.2</version>
         </dependency>
 
         <!-- Test -->
