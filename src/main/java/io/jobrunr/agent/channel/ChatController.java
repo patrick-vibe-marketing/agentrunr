@@ -2,8 +2,10 @@ package io.jobrunr.agent.channel;
 
 import io.jobrunr.agent.core.*;
 import io.jobrunr.agent.security.InputSanitizer;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import reactor.core.publisher.Flux;
 
 import java.util.List;
 import java.util.Map;
@@ -60,6 +62,36 @@ public class ChatController {
                 response.activeAgent().name(),
                 response.contextVariables()
         ));
+    }
+
+    /**
+     * Streaming chat endpoint. Returns SSE events with tokens as they arrive.
+     */
+    @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> chatStream(@RequestBody ChatRequestDto request) {
+        Agent defaultAgent = agentConfigurer.getDefaultAgent();
+        Agent agent = (request.model() != null && !request.model().isBlank())
+                ? new Agent(defaultAgent.name(), request.model(), defaultAgent.instructions(), defaultAgent.toolNames())
+                : defaultAgent;
+
+        inputSanitizer.validateMessageCount(request.messages().size());
+
+        List<ChatMessage> messages = request.messages().stream()
+                .map(m -> new ChatMessage(
+                        ChatMessage.Role.valueOf(m.role().toUpperCase()),
+                        inputSanitizer.sanitize(m.content()),
+                        null,
+                        null
+                ))
+                .toList();
+
+        AgentContext context = new AgentContext();
+        if (request.contextVariables() != null) {
+            context.merge(request.contextVariables());
+        }
+
+        return agentRunner.runStreaming(agent, messages, context,
+                request.maxTurns() > 0 ? request.maxTurns() : 10);
     }
 
     /**

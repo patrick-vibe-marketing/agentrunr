@@ -8,6 +8,7 @@ let settings = {
     maxTurns: 10
 };
 let chatHistory = [];
+let streamingEnabled = true;
 
 // DOM Elements
 const chatMessages = document.getElementById('chatMessages');
@@ -61,6 +62,11 @@ modelSelect.addEventListener('change', () => {
     modelBadge.textContent = modelSelect.options[modelSelect.selectedIndex].text;
 });
 
+// Streaming toggle
+document.getElementById('streamToggle').addEventListener('change', (e) => {
+    streamingEnabled = e.target.checked;
+});
+
 async function sendMessage() {
     const text = chatInput.value.trim();
     if (!text) return;
@@ -77,7 +83,83 @@ async function sendMessage() {
     sendBtn.disabled = true;
     chatInput.disabled = true;
 
-    // Show typing indicator
+    if (streamingEnabled) {
+        await sendMessageStreaming();
+    } else {
+        await sendMessageNonStreaming();
+    }
+
+    sendBtn.disabled = false;
+    chatInput.disabled = false;
+    chatInput.focus();
+}
+
+async function sendMessageStreaming() {
+    // Create assistant message element for streaming
+    const msgDiv = document.createElement('div');
+    msgDiv.className = 'message assistant';
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content';
+    contentDiv.textContent = '';
+    msgDiv.appendChild(contentDiv);
+    chatMessages.appendChild(msgDiv);
+
+    let fullContent = '';
+
+    try {
+        const response = await fetch(`${API_BASE}/chat/stream`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                messages: chatHistory,
+                model: modelSelect.value,
+                maxTurns: settings.maxTurns,
+                contextVariables: {}
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            // Parse SSE events
+            const lines = chunk.split('\n');
+            for (const line of lines) {
+                if (line.startsWith('data:')) {
+                    const data = line.substring(5).trim();
+                    if (data) {
+                        // Remove surrounding quotes if present (JSON string)
+                        let token = data;
+                        if (token.startsWith('"') && token.endsWith('"')) {
+                            try { token = JSON.parse(token); } catch(e) { /* use raw */ }
+                        }
+                        fullContent += token;
+                        contentDiv.textContent = fullContent;
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }
+                }
+            }
+        }
+
+        chatHistory.push({ role: 'assistant', content: fullContent });
+
+    } catch (error) {
+        if (!fullContent) {
+            msgDiv.remove();
+        }
+        addMessage('system', 'Error: ' + error.message);
+    }
+}
+
+async function sendMessageNonStreaming() {
     const typingEl = showTyping();
 
     try {
@@ -97,26 +179,18 @@ async function sendMessage() {
         }
 
         const data = await response.json();
-
-        // Remove typing indicator
         typingEl.remove();
 
-        // Add assistant response
         addMessage('assistant', data.response);
         chatHistory.push({ role: 'assistant', content: data.response });
 
-        // Update agent name if changed (handoff)
         if (data.agent) {
             agentNameEl.textContent = data.agent;
         }
 
     } catch (error) {
         typingEl.remove();
-        addMessage('system', '❌ Error: ' + error.message);
-    } finally {
-        sendBtn.disabled = false;
-        chatInput.disabled = false;
-        chatInput.focus();
+        addMessage('system', 'Error: ' + error.message);
     }
 }
 
