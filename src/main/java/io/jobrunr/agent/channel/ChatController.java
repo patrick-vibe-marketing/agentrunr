@@ -70,6 +70,26 @@ public class ChatController {
         return ResponseEntity.ok(Map.of("status", "ok", "service", "jobrunr-agent"));
     }
 
+    /**
+     * Update agent settings at runtime.
+     */
+    @PutMapping("/settings")
+    public ResponseEntity<Map<String, String>> updateSettings(@RequestBody SettingsDto settings) {
+        agentConfigurer.update(settings.agentName(), settings.model(), settings.instructions(), settings.maxTurns());
+        return ResponseEntity.ok(Map.of("status", "saved"));
+    }
+
+    /**
+     * Get current agent settings.
+     */
+    @GetMapping("/settings")
+    public ResponseEntity<SettingsDto> getSettings() {
+        Agent agent = agentConfigurer.getDefaultAgent();
+        return ResponseEntity.ok(new SettingsDto(agent.name(), agent.resolvedModel(), agent.instructions(), 10));
+    }
+
+    public record SettingsDto(String agentName, String model, String instructions, int maxTurns) {}
+
     // --- DTOs ---
 
     public record ChatRequestDto(

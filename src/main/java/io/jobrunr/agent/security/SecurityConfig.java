@@ -21,9 +21,10 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/", "/index.html", "/css/**", "/js/**").permitAll()
                         .requestMatchers("/api/health").permitAll()
-                        .requestMatchers("/api/**").permitAll() // Phase 5: require API key
-                        .requestMatchers("/dashboard/**").permitAll() // JobRunr dashboard
+                        .requestMatchers("/api/**").permitAll()
+                        .requestMatchers("/dashboard/**").permitAll()
                         .anyRequest().denyAll()
                 );
         return http.build();
