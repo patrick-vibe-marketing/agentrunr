@@ -161,9 +161,46 @@ curl http://localhost:8090/api/health
 | JobRunr | 8.4.2 | Background job execution + scheduling |
 | Java | 21 | Records, pattern matching, virtual threads |
 
-## Why not use Claude Code OAuth tokens?
+## Claude Code OAuth Integration
 
-Anthropic's updated terms (February 2026) explicitly prohibit using Claude Code OAuth tokens in other products or services. This project uses standard API keys only. If you need Anthropic models, get an API key from [console.anthropic.com](https://console.anthropic.com).
+Use your Claude Code subscription (Pro/Max/Team) for Anthropic models without a separate API key.
+
+### Setup
+
+1. Install and authenticate Claude Code:
+   ```bash
+   # Install Claude Code CLI
+   npm install -g @anthropic-ai/claude-code
+   
+   # Authenticate (opens browser)
+   claude auth login
+   ```
+
+2. Enable in your `.env`:
+   ```bash
+   CLAUDE_CODE_OAUTH_ENABLED=true
+   CLAUDE_CODE_MODEL=claude-sonnet-4-20250514  # optional, this is the default
+   ```
+
+3. Start the app — it reads the OAuth token from your system keychain automatically.
+
+### How it works
+
+- **macOS**: Reads from Keychain (`security find-generic-password -s "Claude Code-credentials"`)
+- **Linux**: Reads from `~/.claude/.credentials.json`
+- Token format: `sk-ant-oat01-*` (standard Anthropic OAuth access token)
+- Tokens expire — run any `claude` command to refresh when needed
+- Token metadata (subscription type, rate limit tier) available via `GET /api/claude-code-oauth`
+
+### Admin API
+
+```bash
+# Check token status
+curl http://localhost:8090/api/claude-code-oauth
+
+# Force token refresh from keychain
+curl -X POST http://localhost:8090/api/claude-code-oauth/refresh
+```
 
 ## Development
 

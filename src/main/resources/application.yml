@@ -46,6 +46,10 @@ agent:
     You can use tools to help users accomplish tasks.
     Be concise and helpful.
 
+  # Claude Code OAuth — use Claude Code subscription for Anthropic models
+  claude-code-oauth:
+    enabled: ${CLAUDE_CODE_OAUTH_ENABLED:false}
+
   # Heartbeat — periodic task check
   heartbeat:
     enabled: ${HEARTBEAT_ENABLED:true}

@@ -1,9 +1,12 @@
 package io.jobrunr.agent.channel;
 
+import io.jobrunr.agent.config.ClaudeCodeOAuthProvider;
 import io.jobrunr.agent.config.ModelRouter;
 import io.jobrunr.agent.memory.FileMemoryStore;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -20,10 +23,16 @@ public class AdminController {
 
     private final ModelRouter modelRouter;
     private final FileMemoryStore memoryStore;
+    private final ClaudeCodeOAuthProvider claudeCodeOAuthProvider;
 
-    public AdminController(ModelRouter modelRouter, FileMemoryStore memoryStore) {
+    public AdminController(
+            ModelRouter modelRouter,
+            FileMemoryStore memoryStore,
+            @Autowired(required = false) ClaudeCodeOAuthProvider claudeCodeOAuthProvider
+    ) {
         this.modelRouter = modelRouter;
         this.memoryStore = memoryStore;
+        this.claudeCodeOAuthProvider = claudeCodeOAuthProvider;
     }
 
     /**
@@ -59,6 +68,48 @@ public class AdminController {
             // Provider not available
         }
         return new ProviderInfo(false, null);
+    }
+
+    /**
+     * Returns Claude Code OAuth token status.
+     */
+    @GetMapping("/claude-code-oauth")
+    public ResponseEntity<Map<String, Object>> getClaudeCodeOAuthStatus() {
+        Map<String, Object> status = new HashMap<>();
+        if (claudeCodeOAuthProvider == null) {
+            status.put("available", false);
+            status.put("reason", "ClaudeCodeOAuthProvider not configured");
+            return ResponseEntity.ok(status);
+        }
+
+        var tokenInfo = claudeCodeOAuthProvider.getTokenInfo();
+        if (tokenInfo.isEmpty()) {
+            status.put("available", false);
+            status.put("reason", "No Claude Code credentials found. Run 'claude auth login'.");
+            return ResponseEntity.ok(status);
+        }
+
+        var info = tokenInfo.get();
+        status.put("available", true);
+        status.put("valid", info.valid());
+        status.put("subscriptionType", info.subscriptionType());
+        status.put("rateLimitTier", info.rateLimitTier());
+        status.put("scopes", info.scopes());
+        status.put("expiresAt", info.expiresAt() != null ? info.expiresAt().toString() : null);
+        return ResponseEntity.ok(status);
+    }
+
+    /**
+     * Refreshes the cached Claude Code OAuth token.
+     */
+    @PostMapping("/claude-code-oauth/refresh")
+    public ResponseEntity<Map<String, Object>> refreshClaudeCodeOAuth() {
+        if (claudeCodeOAuthProvider == null) {
+            return ResponseEntity.ok(Map.of("success", false, "reason", "Not configured"));
+        }
+        claudeCodeOAuthProvider.invalidateCache();
+        var token = claudeCodeOAuthProvider.getAccessToken();
+        return ResponseEntity.ok(Map.of("success", token.isPresent()));
     }
 
     record ProviderInfo(boolean available, String model) {}
