@@ -1,6 +1,10 @@
 spring:
   application:
     name: jobrunr-agent
+  autoconfigure:
+    exclude:
+      - ${EXCLUDE_OLLAMA:org.springframework.ai.autoconfigure.ollama.OllamaAutoConfiguration}
+      - ${EXCLUDE_ANTHROPIC:org.springframework.ai.autoconfigure.anthropic.AnthropicAutoConfiguration}
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:sk-placeholder}
@@ -9,11 +13,15 @@ spring:
           model: gpt-4o
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      init:
+        chat:
+          include: ${OLLAMA_ENABLED:false}
       chat:
         options:
           model: ${OLLAMA_MODEL:llama3.2}
     anthropic:
-      api-key: ${ANTHROPIC_API_KEY:sk-placeholder}
+      api-key: ${ANTHROPIC_API_KEY:}
+      enabled: ${ANTHROPIC_ENABLED:false}
       chat:
         options:
           model: claude-sonnet-4-20250514
@@ -45,8 +53,7 @@ org:
     background-job-server:
       enabled: true
     dashboard:
-      enabled: true
-      port: 8000
+      enabled: false
     database:
       type: sql
       datasource:
@@ -65,7 +72,7 @@ org:
 
 # Server
 server:
-  port: 8080
+  port: ${SERVER_PORT:8090}
 
 # Logging
 logging:

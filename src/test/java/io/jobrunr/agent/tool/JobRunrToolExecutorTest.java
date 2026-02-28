@@ -20,36 +20,36 @@ class JobRunrToolExecutorTest {
     @Mock
     private ToolExecutionService toolExecutionService;
 
+    private ToolResultStore resultStore;
     private JobRunrToolExecutor executor;
 
     @BeforeEach
     void setUp() {
-        executor = new JobRunrToolExecutor(jobScheduler, toolExecutionService);
+        resultStore = new ToolResultStore();
+        executor = new JobRunrToolExecutor(jobScheduler, resultStore, toolExecutionService);
     }
 
     @Test
     void shouldStoreAndRetrieveResults() {
-        var result = AgentResult.of("Success!");
-        executor.storeResult("job-1", result);
+        resultStore.store("job-1", AgentResult.of("Success!"));
 
-        assertTrue(executor.isComplete("job-1"));
-        assertEquals("Success!", executor.getResult("job-1").value());
+        assertTrue(resultStore.isComplete("job-1"));
+        assertEquals("Success!", resultStore.get("job-1").value());
     }
 
     @Test
     void shouldReturnNullForIncompleteJob() {
-        assertFalse(executor.isComplete("nonexistent"));
-        assertNull(executor.getResult("nonexistent"));
+        assertFalse(resultStore.isComplete("nonexistent"));
+        assertNull(resultStore.get("nonexistent"));
     }
 
     @Test
     void shouldConsumeResult() {
-        var result = AgentResult.of("Done");
-        executor.storeResult("job-2", result);
+        resultStore.store("job-2", AgentResult.of("Done"));
 
-        var consumed = executor.consumeResult("job-2");
+        var consumed = resultStore.consume("job-2");
         assertEquals("Done", consumed.value());
-        assertFalse(executor.isComplete("job-2"));
+        assertFalse(resultStore.isComplete("job-2"));
     }
 
     @Test

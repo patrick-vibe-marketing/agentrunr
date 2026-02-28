@@ -5,7 +5,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -35,9 +34,9 @@ public class ModelRouter {
 
     @Autowired
     public ModelRouter(
-            @Qualifier("openAiChatModel") @Nullable ChatModel openAiChatModel,
-            @Qualifier("ollamaChatModel") @Nullable ChatModel ollamaChatModel,
-            @Qualifier("anthropicChatModel") @Nullable ChatModel anthropicChatModel
+            @Autowired(required = false) @Qualifier("openAiChatModel") ChatModel openAiChatModel,
+            @Autowired(required = false) @Qualifier("ollamaChatModel") ChatModel ollamaChatModel,
+            @Autowired(required = false) @Qualifier("anthropicChatModel") ChatModel anthropicChatModel
     ) {
         if (openAiChatModel != null) providers.put("openai", openAiChatModel);
         if (ollamaChatModel != null) providers.put("ollama", ollamaChatModel);
