@@ -3,7 +3,7 @@ package io.jobrunr.agent.config;
 import io.jobrunr.agent.core.ToolRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.model.function.FunctionCallback;
+import org.springframework.ai.tool.ToolCallback;
 import org.springframework.ai.tool.ToolCallbackProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.context.annotation.Configuration;
@@ -37,8 +37,8 @@ public class McpConfig {
     public void registerMcpTools() {
         int count = 0;
         for (ToolCallbackProvider provider : toolCallbackProviders) {
-            for (FunctionCallback callback : provider.getToolCallbacks()) {
-                String toolName = callback.getName();
+            for (ToolCallback callback : provider.getToolCallbacks()) {
+                String toolName = callback.getToolDefinition().name();
                 toolRegistry.registerFunctionCallback(toolName, callback);
                 count++;
                 log.debug("Registered MCP tool: {}", toolName);

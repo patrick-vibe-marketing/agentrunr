@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.ai.model.function.FunctionCallback;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +27,7 @@ public class ToolRegistry {
     private static final Logger log = LoggerFactory.getLogger(ToolRegistry.class);
 
     private final Map<String, ToolCallback> toolCallbacks = new HashMap<>();
-    private final Map<String, FunctionCallback> functionCallbacks = new HashMap<>();
+    private final Map<String, ToolCallback> functionCallbacks = new HashMap<>();
     private final Map<String, AgentTool> agentTools = new HashMap<>();
     private final ObjectMapper objectMapper;
 
@@ -47,7 +46,7 @@ public class ToolRegistry {
     /**
      * Registers a Spring AI function callback (e.g., from MCP providers).
      */
-    public void registerFunctionCallback(String name, FunctionCallback callback) {
+    public void registerFunctionCallback(String name, ToolCallback callback) {
         functionCallbacks.put(name, callback);
         log.debug("Registered function callback: {}", name);
     }
@@ -110,7 +109,7 @@ public class ToolRegistry {
         }
 
         // Fall back to function callbacks (MCP)
-        FunctionCallback functionCallback = functionCallbacks.get(toolName);
+        ToolCallback functionCallback = functionCallbacks.get(toolName);
         if (functionCallback != null) {
             try {
                 String result = functionCallback.call(arguments);

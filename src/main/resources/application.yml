@@ -25,18 +25,17 @@ spring:
       chat:
         options:
           model: claude-sonnet-4-20250514
-    # MCP servers (uncomment and configure as needed)
-    # mcp:
-    #   client:
-    #     stdio:
-    #       servers:
-    #         filesystem:
-    #           command: npx
-    #           args: ["@modelcontextprotocol/server-filesystem", "/tmp"]
-    #     sse:
-    #       servers:
-    #         custom-server:
-    #           url: http://localhost:3000/sse
+
+# MCP (Model Context Protocol)
+# We wire MCP clients programmatically to support custom auth headers.
+# Configure via env vars:
+# - PERSONAL_CALENDAR_MCP_URL
+# - PERSONAL_CALENDAR_MCP_PASSWORD
+mcp:
+  personal-calendar:
+    enabled: ${PERSONAL_CALENDAR_MCP_ENABLED:false}
+    url: ${PERSONAL_CALENDAR_MCP_URL:}
+    password: ${PERSONAL_CALENDAR_MCP_PASSWORD:}
 
 # Agent configuration
 agent:
