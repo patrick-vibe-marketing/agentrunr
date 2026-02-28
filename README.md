@@ -82,16 +82,51 @@ Combines Spring AI's `@Tool` annotated methods, MCP server tools, and custom `Ag
 |-----------|---------|---------|
 | Spring Boot | 3.4.x | Application framework |
 | Spring AI | 1.0.x | LLM abstraction + tool calling + MCP |
-| JobRunr | 7.3.x | Background job execution + scheduling |
+| JobRunr | 8.4.x | Background job execution + scheduling |
 | Java | 21 | Records, pattern matching, text blocks |
+
+## Multi-Model Support
+
+Agents can use any configured provider. Specify the model per-agent or per-request:
+
+```bash
+# Use OpenAI (default)
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}], "maxTurns": 10}'
+
+# Use local Ollama
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}], "model": "ollama:llama3", "maxTurns": 10}'
+
+# Use Anthropic
+curl -X POST http://localhost:8080/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}], "model": "anthropic:claude-sonnet-4-20250514", "maxTurns": 10}'
+```
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `OPENAI_API_KEY` | OpenAI API key | At least one provider |
+| `ANTHROPIC_API_KEY` | Anthropic API key | Optional |
+| `OLLAMA_BASE_URL` | Ollama server URL (default: http://localhost:11434) | Optional |
+| `OLLAMA_MODEL` | Default Ollama model (default: llama3.2) | Optional |
+| `TELEGRAM_ENABLED` | Enable Telegram bot (true/false) | Optional |
+| `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather | If Telegram enabled |
+| `TELEGRAM_ALLOWED_USERS` | Comma-separated Telegram user IDs | Optional |
+| `AGENT_API_KEY` | API key for REST endpoint authentication | Optional |
+| `AGENT_MEMORY_PATH` | Path for file-based memory (default: ./data/memory) | Optional |
 
 ## Project Status
 
 - [x] Phase 1: Core agent loop (Agent, AgentRunner, ToolRegistry, REST API)
-- [ ] Phase 2: JobRunr integration (tools as background jobs)
-- [ ] Phase 3: MCP support
-- [ ] Phase 4: Memory & Telegram channel
-- [ ] Phase 5: Security hardening
+- [x] Phase 2: JobRunr integration (tools as background jobs)
+- [x] Phase 3: MCP support (auto-discovery via Spring AI)
+- [x] Phase 4: Memory (file-based) & Telegram channel
+- [x] Phase 5: Security (API key auth, input sanitization)
 
 ## License
 

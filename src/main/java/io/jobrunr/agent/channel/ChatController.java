@@ -1,6 +1,7 @@
 package io.jobrunr.agent.channel;
 
 import io.jobrunr.agent.core.*;
+import io.jobrunr.agent.security.InputSanitizer;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,10 +18,12 @@ public class ChatController {
 
     private final AgentRunner agentRunner;
     private final AgentConfigurer agentConfigurer;
+    private final InputSanitizer inputSanitizer;
 
-    public ChatController(AgentRunner agentRunner, AgentConfigurer agentConfigurer) {
+    public ChatController(AgentRunner agentRunner, AgentConfigurer agentConfigurer, InputSanitizer inputSanitizer) {
         this.agentRunner = agentRunner;
         this.agentConfigurer = agentConfigurer;
+        this.inputSanitizer = inputSanitizer;
     }
 
     /**
@@ -34,10 +37,12 @@ public class ChatController {
                 ? new Agent(defaultAgent.name(), request.model(), defaultAgent.instructions(), defaultAgent.toolNames())
                 : defaultAgent;
 
+        inputSanitizer.validateMessageCount(request.messages().size());
+
         List<ChatMessage> messages = request.messages().stream()
                 .map(m -> new ChatMessage(
                         ChatMessage.Role.valueOf(m.role().toUpperCase()),
-                        m.content(),
+                        inputSanitizer.sanitize(m.content()),
                         null,
                         null
                 ))

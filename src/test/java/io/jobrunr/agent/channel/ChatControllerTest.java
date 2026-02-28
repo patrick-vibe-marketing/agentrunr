@@ -19,6 +19,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(ChatController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@org.springframework.context.annotation.Import(io.jobrunr.agent.security.InputSanitizer.class)
 class ChatControllerTest {
 
     @Autowired
