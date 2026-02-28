@@ -1,4 +1,4 @@
-# JobRunr Agent 🤖
+# AgentRunr 🤖
 
 A Java-native AI agent runtime powered by **Spring Boot**, **Spring AI**, and **JobRunr**.
 
@@ -209,7 +209,7 @@ curl -X POST http://localhost:8090/api/claude-code-oauth/refresh
 mvn clean verify
 
 # Run with debug logging
-mvn spring-boot:run -Dspring-boot.run.arguments="--logging.level.io.jobrunr.agent=DEBUG"
+mvn spring-boot:run -Dspring-boot.run.arguments="--logging.level.io.agentrunr=DEBUG"
 ```
 
 ## Roadmap

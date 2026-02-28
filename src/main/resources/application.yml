@@ -1,6 +1,6 @@
 spring:
   application:
-    name: jobrunr-agent
+    name: agentrunr
   autoconfigure:
     exclude:
       - ${EXCLUDE_OLLAMA:org.springframework.ai.autoconfigure.ollama.OllamaAutoConfiguration}
@@ -42,7 +42,7 @@ agent:
   name: Assistant
   model: gpt-4o
   instructions: >
-    You are a helpful AI assistant powered by JobRunr Agent.
+    You are a helpful AI assistant powered by AgentRunr.
     You can use tools to help users accomplish tasks.
     Be concise and helpful.
 
@@ -94,5 +94,5 @@ server:
 # Logging
 logging:
   level:
-    io.jobrunr.agent: DEBUG
+    io.agentrunr: DEBUG
     org.springframework.ai: INFO

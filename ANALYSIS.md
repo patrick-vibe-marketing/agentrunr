@@ -1,4 +1,4 @@
-# JobRunr Agent — Analysis & Build Plan
+# AgentRunr — Analysis & Build Plan
 
 ## Vision
 A Java-native AI agent runtime inspired by OpenAI Swarm (agent core) and the *Claw ecosystem (nanobot, PicoClaw, ZeroClaw) for infrastructure patterns. Uses **Spring Boot + Spring AI + JobRunr** to demonstrate how JobRunr can power production-grade AI agent workloads.
@@ -56,7 +56,7 @@ Only the **agent loop logic** from core.py:
 ## Architecture
 
 ```
-jobrunr-agent/
+agentrunr/
 ├── src/main/java/io/jobrunr/agent/
 │   ├── AgentApplication.java              # Spring Boot entry point
 │   ├── core/

@@ -1,10 +1,10 @@
-// JobRunr Agent Web UI
+// AgentRunr Web UI
 
 const API_BASE = '/api';
 let settings = {
     agentName: 'Assistant',
     model: 'gpt-4o',
-    instructions: 'You are a helpful AI assistant powered by JobRunr Agent.',
+    instructions: 'You are a helpful AI assistant powered by AgentRunr.',
     maxTurns: 10
 };
 let chatHistory = [];

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentRunr — Setup</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .setup-container {
+            max-width: 520px;
+            margin: 80px auto;
+            padding: 40px;
+            background: var(--bg-secondary, #1e1e2e);
+            border-radius: 16px;
+            border: 1px solid var(--border, #333);
+        }
+        .setup-title {
+            text-align: center;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+        }
+        .setup-subtitle {
+            text-align: center;
+            color: var(--text-muted, #888);
+            margin-bottom: 32px;
+        }
+        .setup-field {
+            margin-bottom: 24px;
+        }
+        .setup-field label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary, #e0e0e0);
+        }
+        .setup-field input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border, #444);
+            background: var(--bg-primary, #121220);
+            color: var(--text-primary, #e0e0e0);
+            font-family: monospace;
+            font-size: 0.9rem;
+            box-sizing: border-box;
+        }
+        .setup-field input:focus {
+            outline: none;
+            border-color: var(--accent, #7c5cff);
+        }
+        .setup-field .hint {
+            font-size: 0.8rem;
+            color: var(--text-muted, #666);
+            margin-top: 4px;
+        }
+        .provider-status {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 0.9rem;
+        }
+        .provider-status.ok { color: #4caf50; }
+        .provider-status.fail { color: #f44336; }
+        .setup-btn {
+            width: 100%;
+            padding: 14px;
+            border-radius: 8px;
+            border: none;
+            background: var(--accent, #7c5cff);
+            color: white;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+        .setup-btn:hover { opacity: 0.9; }
+        .setup-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .setup-message {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 0.9rem;
+        }
+        .setup-message.success { color: #4caf50; }
+        .setup-message.error { color: #f44336; }
+        .setup-skip {
+            text-align: center;
+            margin-top: 24px;
+        }
+        .setup-skip a {
+            color: var(--text-muted, #888);
+            text-decoration: none;
+            font-size: 0.85rem;
+        }
+        .setup-skip a:hover { color: var(--text-primary, #e0e0e0); }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <h1 class="setup-title">🤖 AgentRunr</h1>
+        <p class="setup-subtitle">Let's set up your AI provider</p>
+
+        <div class="setup-field">
+            <label>
+                OpenAI API Key
+                <span class="provider-status" id="openaiStatus"></span>
+            </label>
+            <input type="password" id="openaiKey" placeholder="sk-...">
+            <div class="hint">Get yours at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com</a></div>
+        </div>
+
+        <div class="setup-field">
+            <label>
+                Anthropic API Key
+                <span class="provider-status" id="anthropicStatus"></span>
+            </label>
+            <input type="password" id="anthropicKey" placeholder="sk-ant-...">
+            <div class="hint">Get yours at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></div>
+        </div>
+
+        <button class="setup-btn" id="saveBtn" onclick="saveKeys()">Save &amp; Connect</button>
+        <div class="setup-message" id="message"></div>
+
+        <div class="setup-skip">
+            <a href="/">← Back to chat (if already configured via env vars)</a>
+        </div>
+    </div>
+
+    <script>
+        async function loadStatus() {
+            try {
+                const res = await fetch('/api/setup/status');
+                const data = await res.json();
+                updateStatus('openaiStatus', data.providers.openai);
+                updateStatus('anthropicStatus', data.providers.anthropic);
+            } catch (e) {
+                console.error('Failed to load status', e);
+            }
+        }
+
+        function updateStatus(id, configured) {
+            const el = document.getElementById(id);
+            if (configured) {
+                el.textContent = '✅ Connected';
+                el.className = 'provider-status ok';
+            } else {
+                el.textContent = '❌ Not configured';
+                el.className = 'provider-status fail';
+            }
+        }
+
+        async function saveKeys() {
+            const btn = document.getElementById('saveBtn');
+            const msg = document.getElementById('message');
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+            msg.textContent = '';
+
+            const body = {};
+            const openai = document.getElementById('openaiKey').value.trim();
+            const anthropic = document.getElementById('anthropicKey').value.trim();
+            if (openai) body.openai = openai;
+            if (anthropic) body.anthropic = anthropic;
+
+            if (!openai && !anthropic) {
+                msg.textContent = 'Please enter at least one API key.';
+                msg.className = 'setup-message error';
+                btn.disabled = false;
+                btn.textContent = 'Save & Connect';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/setup/save', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    msg.textContent = '🔐 Keys saved and encrypted! Redirecting...';
+                    msg.className = 'setup-message success';
+                    updateStatus('openaiStatus', data.providers.openai);
+                    updateStatus('anthropicStatus', data.providers.anthropic);
+                    setTimeout(() => window.location.href = '/', 1500);
+                } else {
+                    msg.textContent = 'Error: ' + (data.error || 'Unknown error');
+                    msg.className = 'setup-message error';
+                }
+            } catch (e) {
+                msg.textContent = 'Connection error: ' + e.message;
+                msg.className = 'setup-message error';
+            }
+
+            btn.disabled = false;
+            btn.textContent = 'Save & Connect';
+        }
+
+        loadStatus();
+    </script>
+</body>
+</html>
