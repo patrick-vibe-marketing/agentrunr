@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.ai.model.function.FunctionCallback;
 import org.springframework.ai.tool.ToolCallback;
 import org.springframework.stereotype.Component;
 
@@ -27,6 +28,7 @@ public class ToolRegistry {
     private static final Logger log = LoggerFactory.getLogger(ToolRegistry.class);
 
     private final Map<String, ToolCallback> toolCallbacks = new HashMap<>();
+    private final Map<String, FunctionCallback> functionCallbacks = new HashMap<>();
     private final Map<String, AgentTool> agentTools = new HashMap<>();
     private final ObjectMapper objectMapper;
 
@@ -40,6 +42,14 @@ public class ToolRegistry {
     public void registerToolCallback(String name, ToolCallback callback) {
         toolCallbacks.put(name, callback);
         log.debug("Registered tool callback: {}", name);
+    }
+
+    /**
+     * Registers a Spring AI function callback (e.g., from MCP providers).
+     */
+    public void registerFunctionCallback(String name, FunctionCallback callback) {
+        functionCallbacks.put(name, callback);
+        log.debug("Registered function callback: {}", name);
     }
 
     /**
@@ -95,6 +105,18 @@ public class ToolRegistry {
                 return AgentResult.of(result);
             } catch (Exception e) {
                 log.error("Error executing tool '{}': {}", toolName, e.getMessage(), e);
+                return AgentResult.of("Error: " + e.getMessage());
+            }
+        }
+
+        // Fall back to function callbacks (MCP)
+        FunctionCallback functionCallback = functionCallbacks.get(toolName);
+        if (functionCallback != null) {
+            try {
+                String result = functionCallback.call(arguments);
+                return AgentResult.of(result);
+            } catch (Exception e) {
+                log.error("Error executing MCP tool '{}': {}", toolName, e.getMessage(), e);
                 return AgentResult.of("Error: " + e.getMessage());
             }
         }
