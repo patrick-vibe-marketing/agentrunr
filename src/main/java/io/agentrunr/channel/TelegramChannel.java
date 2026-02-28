@@ -2,6 +2,7 @@ package io.agentrunr.channel;
 
 import io.agentrunr.core.*;
 import io.agentrunr.memory.FileMemoryStore;
+import io.agentrunr.memory.SQLiteMemoryStore;
 import io.agentrunr.setup.CredentialStore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -41,6 +42,7 @@ public class TelegramChannel {
     private final AgentRunner agentRunner;
     private final AgentConfigurer agentConfigurer;
     private final FileMemoryStore memoryStore;
+    private final SQLiteMemoryStore sqliteMemory;
     private final ObjectMapper objectMapper;
     private final CredentialStore credentialStore;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -50,11 +52,12 @@ public class TelegramChannel {
     private long lastUpdateId = 0;
 
     public TelegramChannel(AgentRunner agentRunner, AgentConfigurer agentConfigurer,
-                           FileMemoryStore memoryStore, ObjectMapper objectMapper,
-                           CredentialStore credentialStore) {
+                           FileMemoryStore memoryStore, SQLiteMemoryStore sqliteMemory,
+                           ObjectMapper objectMapper, CredentialStore credentialStore) {
         this.agentRunner = agentRunner;
         this.agentConfigurer = agentConfigurer;
         this.memoryStore = memoryStore;
+        this.sqliteMemory = sqliteMemory;
         this.objectMapper = objectMapper;
         this.credentialStore = credentialStore;
     }
@@ -128,12 +131,14 @@ public class TelegramChannel {
         // Store in memory
         String sessionId = "telegram-" + chatId;
         memoryStore.appendMessage(sessionId, "user", userName + ": " + text);
+        sqliteMemory.storeConversationMessage(sessionId, "user", userName + ": " + text);
 
         // Load context
         var contextVars = memoryStore.loadContext(sessionId);
         contextVars.put("user_name", userName);
         contextVars.put("telegram_chat_id", String.valueOf(chatId));
         var context = new AgentContext(contextVars);
+        context.set("session_id", sessionId);
 
         // Run agent
         try {
@@ -146,6 +151,7 @@ public class TelegramChannel {
             sendMessage(chatId, reply);
             memoryStore.appendMessage(sessionId, "assistant", reply);
             memoryStore.saveContext(sessionId, agentResponse.contextVariables());
+            sqliteMemory.storeConversationMessage(sessionId, "assistant", reply);
 
         } catch (Exception e) {
             log.error("Error processing Telegram message: {}", e.getMessage(), e);
