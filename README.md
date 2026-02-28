@@ -2,39 +2,58 @@
 
 A Java-native AI agent runtime powered by **Spring Boot**, **Spring AI**, and **JobRunr**.
 
-Inspired by [OpenAI Swarm](https://github.com/openai/swarm)'s lightweight agent orchestration pattern and the *Claw ecosystem ([nanobot](https://github.com/HKUDS/nanobot), [PicoClaw](https://github.com/sipeed/picoclaw), [ZeroClaw](https://github.com/zeroclaw-labs/zeroclaw)).
+Inspired by [OpenAI Swarm](https://github.com/openai/swarm)'s lightweight agent orchestration pattern and the Claw ecosystem (nanobot, PicoClaw, ZeroClaw). Think **"ZeroClaw for enterprises that run Java."**
 
 ## What is this?
 
 An AI agent framework where:
-- **Spring AI** handles LLM communication and tool calling (including MCP)
+- **Spring AI** handles LLM communication, tool calling, and MCP integration
 - **JobRunr** provides production-grade task execution with retries, scheduling, and observability
-- **Swarm's Agent + Handoff pattern** gives you multi-agent orchestration in ~500 lines of Java
+- **Swarm's Agent + Handoff pattern** gives you multi-agent orchestration in clean Java
 
 ## Quick Start
 
 ```bash
-# Set your OpenAI API key
-export OPENAI_API_KEY=sk-...
+# 1. Copy and configure environment variables
+cp .env.example .env
+# Edit .env with your API keys
 
-# Run the application
-mvn spring-boot:run
+# 2. Run the application
+source .env && mvn spring-boot:run
+
+# 3. Open the web UI
+open http://localhost:8090
 ```
 
-### Chat via REST API
+## Features
 
-```bash
-curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{
-    "messages": [{"role": "user", "content": "Hello, what can you do?"}],
-    "maxTurns": 10
-  }'
-```
+### Core
+- **Multi-model support** — OpenAI, Anthropic, Ollama per request (`openai:gpt-4o`, `anthropic:claude-sonnet-4-20250514`, `ollama:llama3`)
+- **Agent orchestration** — Swarm-inspired agent loop with handoffs and context variables
+- **Tool calling** — Unified registry: `@Tool` methods, MCP servers, custom `AgentTool` implementations
+- **MCP support** — Programmatic SSE client with custom auth headers (tested with n8n MCP gateway)
+- **Streaming** — SSE endpoint for real-time token streaming
 
-### JobRunr Dashboard
+### Channels
+- **REST API** — POST `/api/chat`, GET `/api/chat/stream` (SSE)
+- **Web UI** — Dark-themed chat interface with model selector and settings
+- **Telegram** — Long-polling bot with allowed user filtering
 
-Open http://localhost:8000 to see the JobRunr dashboard with all agent task activity.
+### Scheduling (JobRunr-powered 🔥)
+- **Heartbeat** — Periodic task checking via HEARTBEAT.md (configurable interval)
+- **Cron jobs** — Agent-managed scheduling: cron expressions, intervals, one-shot tasks
+- **All JobRunr features** — Retries, dead letter queue, distributed execution, dashboard
+
+### Built-in Tools
+- `shell_exec` — Sandboxed shell commands with workspace restrictions and dangerous command blocking
+- `file_read` / `file_write` / `file_list` — File operations with path traversal prevention
+- `web_search` — Brave Search API integration
+- `web_fetch` — URL fetching with redirect following and size limits
+
+### Security
+- API key authentication (X-API-Key header)
+- Input sanitization (control chars, length limits, message count validation)
+- Workspace sandboxing for file and shell tools
 
 ## Architecture
 
@@ -49,84 +68,121 @@ Open http://localhost:8000 to see the JobRunr dashboard with all agent task acti
 ├─────────────────────────────────────────┤
 │  JobRunr Execution Layer                │
 │  → Tool calls as background jobs        │
-│  → Scheduled agent runs                 │
-│  → Built-in dashboard                   │
+│  → Heartbeat + Cron scheduling          │
+│  → Retries, observability, dashboards   │
 ├─────────────────────────────────────────┤
 │  Channels                               │
-│  → REST API                             │
-│  → Telegram (planned)                   │
+│  → REST API + SSE streaming             │
+│  → Web UI (chat + settings)             │
+│  → Telegram bot                         │
+├─────────────────────────────────────────┤
+│  MCP Integration                        │
+│  → SSE client with custom auth headers  │
+│  → Auto-discovery of MCP tools          │
 └─────────────────────────────────────────┘
 ```
 
-## Core Concepts
+## Configuration
 
-### Agent
-An agent has a name, model, instructions (system prompt), and tools. Like Swarm, agents are lightweight definitions, not heavy objects.
+All configuration is via environment variables. See [`.env.example`](.env.example) for the full list.
 
-```java
-var agent = new Agent("Assistant", "gpt-4o", "You are helpful.", List.of("search", "calculator"));
-```
-
-### Handoff
-Tools can return an `AgentResult.handoff(otherAgent)` to transfer the conversation to a different agent. This enables triage patterns (e.g., route customer to billing vs. technical support).
-
-### Context Variables
-Shared state across tool calls within a run. Tools can read and write context without relying on the LLM to pass data.
-
-### ToolRegistry
-Combines Spring AI's `@Tool` annotated methods, MCP server tools, and custom `AgentTool` implementations into a unified registry.
-
-## Tech Stack
-
-| Component | Version | Purpose |
-|-----------|---------|---------|
-| Spring Boot | 3.4.x | Application framework |
-| Spring AI | 1.0.x | LLM abstraction + tool calling + MCP |
-| JobRunr | 8.4.x | Background job execution + scheduling |
-| Java | 21 | Records, pattern matching, text blocks |
-
-## Multi-Model Support
-
-Agents can use any configured provider. Specify the model per-agent or per-request:
-
-```bash
-# Use OpenAI (default)
-curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello"}], "maxTurns": 10}'
-
-# Use local Ollama
-curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello"}], "model": "ollama:llama3", "maxTurns": 10}'
-
-# Use Anthropic
-curl -X POST http://localhost:8080/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"messages": [{"role": "user", "content": "Hello"}], "model": "anthropic:claude-sonnet-4-20250514", "maxTurns": 10}'
-```
-
-## Environment Variables
+### LLM Providers
 
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `OPENAI_API_KEY` | OpenAI API key | At least one provider |
 | `ANTHROPIC_API_KEY` | Anthropic API key | Optional |
-| `OLLAMA_BASE_URL` | Ollama server URL (default: http://localhost:11434) | Optional |
-| `OLLAMA_MODEL` | Default Ollama model (default: llama3.2) | Optional |
-| `TELEGRAM_ENABLED` | Enable Telegram bot (true/false) | Optional |
-| `TELEGRAM_BOT_TOKEN` | Telegram bot token from @BotFather | If Telegram enabled |
-| `TELEGRAM_ALLOWED_USERS` | Comma-separated Telegram user IDs | Optional |
-| `AGENT_API_KEY` | API key for REST endpoint authentication | Optional |
-| `AGENT_MEMORY_PATH` | Path for file-based memory (default: ./data/memory) | Optional |
+| `ANTHROPIC_ENABLED` | Enable Anthropic provider | Optional |
+| `OLLAMA_BASE_URL` | Ollama server URL | Optional |
+| `OLLAMA_MODEL` | Default Ollama model | Optional |
+| `OLLAMA_ENABLED` | Enable Ollama provider | Optional |
 
-## Project Status
+### Channels
 
-- [x] Phase 1: Core agent loop (Agent, AgentRunner, ToolRegistry, REST API)
-- [x] Phase 2: JobRunr integration (tools as background jobs)
-- [x] Phase 3: MCP support (auto-discovery via Spring AI)
-- [x] Phase 4: Memory (file-based) & Telegram channel
-- [x] Phase 5: Security (API key auth, input sanitization)
+| Variable | Description |
+|----------|-------------|
+| `TELEGRAM_ENABLED` | Enable Telegram bot |
+| `TELEGRAM_BOT_TOKEN` | Bot token from @BotFather |
+| `TELEGRAM_ALLOWED_USERS` | Comma-separated allowed user IDs |
+| `AGENT_API_KEY` | API key for REST authentication |
+
+### MCP Servers
+
+| Variable | Description |
+|----------|-------------|
+| `PERSONAL_CALENDAR_MCP_ENABLED` | Enable Google Calendar MCP |
+| `PERSONAL_CALENDAR_MCP_URL` | n8n MCP SSE endpoint URL |
+| `PERSONAL_CALENDAR_MCP_PASSWORD` | n8n MCP auth password |
+
+### Built-in Tools
+
+| Variable | Description |
+|----------|-------------|
+| `BRAVE_API_KEY` | Brave Search API key |
+| `TOOLS_RESTRICT_WORKSPACE` | Sandbox file/shell to workspace |
+| `TOOLS_WORKSPACE` | Workspace directory path |
+| `TOOLS_SHELL_TIMEOUT` | Shell command timeout (seconds) |
+
+## API Examples
+
+```bash
+# Chat (non-streaming)
+curl -X POST http://localhost:8090/api/chat \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-key" \
+  -d '{"messages": [{"role": "user", "content": "What time is it?"}]}'
+
+# Chat (streaming SSE)
+curl -N http://localhost:8090/api/chat/stream \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-key" \
+  -d '{"messages": [{"role": "user", "content": "Tell me a story"}]}'
+
+# Use a specific model
+curl -X POST http://localhost:8090/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "Hello"}], "model": "anthropic:claude-sonnet-4-20250514"}'
+
+# Schedule a cron task
+curl -X POST http://localhost:8090/api/cron \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Daily Report", "schedule": "0 9 * * *", "message": "Generate daily report"}'
+
+# Health check
+curl http://localhost:8090/api/health
+```
+
+## Tech Stack
+
+| Component | Version | Purpose |
+|-----------|---------|---------|
+| Spring Boot | 3.4.3 | Application framework |
+| Spring AI | 1.0.0 | LLM abstraction + tool calling + MCP |
+| JobRunr | 8.4.2 | Background job execution + scheduling |
+| Java | 21 | Records, pattern matching, virtual threads |
+
+## Why not use Claude Code OAuth tokens?
+
+Anthropic's updated terms (February 2026) explicitly prohibit using Claude Code OAuth tokens in other products or services. This project uses standard API keys only. If you need Anthropic models, get an API key from [console.anthropic.com](https://console.anthropic.com).
+
+## Development
+
+```bash
+# Run tests (120 tests)
+mvn clean verify
+
+# Run with debug logging
+mvn spring-boot:run -Dspring-boot.run.arguments="--logging.level.io.jobrunr.agent=DEBUG"
+```
+
+## Roadmap
+
+- [ ] Semantic memory (vector store + hybrid search)
+- [ ] Autonomy levels (readonly/supervised/full)
+- [ ] Observability (Micrometer + Prometheus)
+- [ ] Discord + Slack channels
+- [ ] Config hot-reload
+- [ ] Encryption at rest
 
 ## License
 
