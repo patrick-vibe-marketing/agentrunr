@@ -12,7 +12,7 @@ import java.util.function.Function;
  * context variables and returns the instructions string.</p>
  *
  * @param name        the agent's display name
- * @param model       the LLM model to use (e.g., "gpt-4o", "claude-sonnet-4-20250514")
+ * @param model       the LLM model to use (e.g., "gpt-4.1", "claude-sonnet-4-20250514")
  * @param instructions static system prompt for the agent
  * @param instructionsFn dynamic system prompt generator (takes context variables, returns instructions). Overrides instructions if set.
  * @param toolNames   list of tool bean names this agent can use (resolved from Spring context)
@@ -27,7 +27,7 @@ public record Agent(
         String toolChoice
 ) {
     /** Default model when none specified. */
-    public static final String DEFAULT_MODEL = "gpt-4o";
+    public static final String DEFAULT_MODEL = "gpt-4.1";
 
     /**
      * Creates an agent with static instructions.

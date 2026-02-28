@@ -116,11 +116,19 @@
             <div class="hint">Get yours at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></div>
         </div>
 
+        <div class="setup-field" id="claudeCodeOauthField" style="border-top: 1px solid var(--border, #333); padding-top: 20px; margin-top: 8px;">
+            <label>
+                Claude Code OAuth
+                <span class="provider-status" id="claudeCodeOauthStatus"></span>
+            </label>
+            <div class="hint">Uses your Claude Code subscription (Pro/Max/Team) instead of an API key. Run <code>claude auth login</code> in your terminal to authenticate.</div>
+        </div>
+
         <button class="setup-btn" id="saveBtn" onclick="saveKeys()">Save &amp; Connect</button>
         <div class="setup-message" id="message"></div>
 
         <div class="setup-skip">
-            <a href="/">← Back to chat (if already configured via env vars)</a>
+            <a href="/">← Back to chat (if already configured)</a>
         </div>
     </div>
 
@@ -131,6 +139,7 @@
                 const data = await res.json();
                 updateStatus('openaiStatus', data.providers.openai);
                 updateStatus('anthropicStatus', data.providers.anthropic);
+                updateStatus('claudeCodeOauthStatus', data.providers.claudeCodeOauth);
             } catch (e) {
                 console.error('Failed to load status', e);
             }

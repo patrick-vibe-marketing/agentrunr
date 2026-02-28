@@ -143,7 +143,12 @@ public class ClaudeCodeOAuthProvider {
             var process = pb.start();
             String output;
             try (var reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
-                output = reader.readLine();
+                var sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+                output = sb.toString();
             }
             int exitCode = process.waitFor();
             if (exitCode != 0 || output == null || output.isBlank()) {

@@ -1,9 +1,9 @@
 package io.agentrunr.channel;
 
 import io.agentrunr.core.*;
+import io.agentrunr.memory.FileMemoryStore;
 import io.agentrunr.setup.CredentialStore;
 import io.agentrunr.security.InputSanitizer;
-import io.agentrunr.setup.CredentialStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -36,6 +36,9 @@ class ChatControllerStreamTest {
 
     @MockBean
     private AgentConfigurer agentConfigurer;
+
+    @MockBean
+    private FileMemoryStore memoryStore;
 
     @Test
     void shouldReturnStreamingResponse() throws Exception {

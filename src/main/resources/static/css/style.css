@@ -414,6 +414,120 @@ body {
     color: var(--text-muted);
 }
 
+/* Help text */
+.help-text {
+    display: block;
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+}
+
+.help-text a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.help-text a:hover {
+    text-decoration: underline;
+}
+
+/* Telegram status */
+.telegram-status {
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-top: 8px;
+}
+
+.telegram-status.configured {
+    color: var(--success);
+}
+
+/* MCP Server List */
+.mcp-server-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.mcp-server-card {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+}
+
+.mcp-server-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.mcp-server-icon {
+    font-size: 14px;
+}
+
+.mcp-server-name {
+    font-weight: 600;
+    font-size: 14px;
+    flex: 1;
+}
+
+.mcp-server-details {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    margin-left: 22px;
+}
+
+.mcp-server-url {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 2px;
+    margin-left: 22px;
+    font-family: 'SF Mono', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mcp-remove-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: all 0.15s;
+}
+
+.mcp-remove-btn:hover {
+    background: var(--error);
+    color: white;
+}
+
+/* MCP Add Form */
+.mcp-add-form {
+    margin-top: 12px;
+}
+
+.mcp-add-form summary {
+    cursor: pointer;
+    color: var(--accent);
+    font-size: 13px;
+    padding: 8px 0;
+    user-select: none;
+}
+
+.mcp-add-form summary:hover {
+    color: var(--accent-hover);
+}
+
+.mcp-add-form[open] summary {
+    margin-bottom: 12px;
+}
+
 /* Session List */
 .session-list {
     display: flex;

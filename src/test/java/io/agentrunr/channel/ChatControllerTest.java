@@ -1,6 +1,7 @@
 package io.agentrunr.channel;
 
 import io.agentrunr.core.*;
+import io.agentrunr.memory.FileMemoryStore;
 import io.agentrunr.setup.CredentialStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ class ChatControllerTest {
 
     @MockBean
     private AgentConfigurer agentConfigurer;
+
+    @MockBean
+    private FileMemoryStore memoryStore;
 
     @Test
     void shouldReturnHealthStatus() throws Exception {

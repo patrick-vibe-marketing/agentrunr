@@ -3,12 +3,21 @@
 const API_BASE = '/api';
 let settings = {
     agentName: 'Assistant',
-    model: 'gpt-4o',
+    model: 'gpt-4.1',
+    fallbackModel: '',
     instructions: 'You are a helpful AI assistant powered by AgentRunr.',
     maxTurns: 10
 };
-let chatHistory = [];
+let sessionId = localStorage.getItem('sessionId') || crypto.randomUUID();
+let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
 let streamingEnabled = true;
+
+localStorage.setItem('sessionId', sessionId);
+
+function persistChat() {
+    localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+    localStorage.setItem('sessionId', sessionId);
+}
 
 // DOM Elements
 const chatMessages = document.getElementById('chatMessages');
@@ -37,6 +46,8 @@ document.querySelectorAll('.nav-link[data-view]').forEach(link => {
         if (view === 'settings') {
             loadSettings();
             loadProviderStatus();
+            loadTelegramSettings();
+            loadMcpServers();
             loadSessions();
         }
     });
@@ -76,8 +87,9 @@ async function sendMessage() {
     chatInput.value = '';
     chatInput.style.height = 'auto';
 
-    // Add to history
+    // Add to history and persist
     chatHistory.push({ role: 'user', content: text });
+    persistChat();
 
     // Disable input
     sendBtn.disabled = true;
@@ -114,7 +126,8 @@ async function sendMessageStreaming() {
                 messages: chatHistory,
                 model: modelSelect.value,
                 maxTurns: settings.maxTurns,
-                contextVariables: {}
+                contextVariables: {},
+                sessionId: sessionId
             })
         });
 
@@ -124,32 +137,53 @@ async function sendMessageStreaming() {
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let buffer = '';
 
         while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
-            // Parse SSE events
-            const lines = chunk.split('\n');
-            for (const line of lines) {
-                if (line.startsWith('data:')) {
-                    const data = line.substring(5).trim();
-                    if (data) {
-                        // Remove surrounding quotes if present (JSON string)
-                        let token = data;
-                        if (token.startsWith('"') && token.endsWith('"')) {
-                            try { token = JSON.parse(token); } catch(e) { /* use raw */ }
-                        }
-                        fullContent += token;
-                        contentDiv.textContent = fullContent;
-                        chatMessages.scrollTop = chatMessages.scrollHeight;
+            buffer += decoder.decode(value, { stream: true });
+
+            // SSE events are separated by double newlines
+            const parts = buffer.split('\n\n');
+            // Keep the last (possibly incomplete) part in the buffer
+            buffer = parts.pop() || '';
+
+            for (const part of parts) {
+                if (!part.trim()) continue;
+
+                let eventType = null;
+                const dataLines = [];
+
+                for (const line of part.split('\n')) {
+                    if (line.startsWith('event:')) {
+                        eventType = line.substring(6).trim();
+                    } else if (line.startsWith('data:')) {
+                        // Preserve whitespace — only strip the single space after "data:" per SSE spec
+                        let d = line.substring(5);
+                        if (d.startsWith(' ')) d = d.substring(1);
+                        dataLines.push(d);
                     }
                 }
+
+                const data = dataLines.join('\n');
+                if (!data) continue;
+
+                if (eventType === 'session') {
+                    sessionId = data;
+                    persistChat();
+                    continue;
+                }
+
+                fullContent += data;
+                contentDiv.textContent = fullContent;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
         }
 
         chatHistory.push({ role: 'assistant', content: fullContent });
+        persistChat();
 
     } catch (error) {
         if (!fullContent) {
@@ -170,7 +204,8 @@ async function sendMessageNonStreaming() {
                 messages: chatHistory,
                 model: modelSelect.value,
                 maxTurns: settings.maxTurns,
-                contextVariables: {}
+                contextVariables: {},
+                sessionId: sessionId
             })
         });
 
@@ -181,8 +216,13 @@ async function sendMessageNonStreaming() {
         const data = await response.json();
         typingEl.remove();
 
+        if (data.sessionId) {
+            sessionId = data.sessionId;
+        }
+
         addMessage('assistant', data.response);
         chatHistory.push({ role: 'assistant', content: data.response });
+        persistChat();
 
         if (data.agent) {
             agentNameEl.textContent = data.agent;
@@ -224,6 +264,7 @@ function showTyping() {
 function loadSettings() {
     document.getElementById('settingAgentName').value = settings.agentName;
     document.getElementById('settingModel').value = settings.model;
+    document.getElementById('settingFallbackModel').value = settings.fallbackModel || '';
     document.getElementById('settingInstructions').value = settings.instructions;
     document.getElementById('settingMaxTurns').value = settings.maxTurns;
 }
@@ -231,6 +272,7 @@ function loadSettings() {
 document.getElementById('saveSettingsBtn').addEventListener('click', async () => {
     settings.agentName = document.getElementById('settingAgentName').value;
     settings.model = document.getElementById('settingModel').value;
+    settings.fallbackModel = document.getElementById('settingFallbackModel').value;
     settings.instructions = document.getElementById('settingInstructions').value;
     settings.maxTurns = parseInt(document.getElementById('settingMaxTurns').value);
 
@@ -245,6 +287,8 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
         if (response.ok) {
             agentNameEl.textContent = settings.agentName;
             modelBadge.textContent = settings.model;
+            // Auto-select the default model in chat
+            applyDefaultModel();
             showToast('Settings saved', 'success');
         } else {
             showToast('Failed to save settings', 'error');
@@ -258,6 +302,8 @@ document.getElementById('saveSettingsBtn').addEventListener('click', async () =>
 
 document.getElementById('clearChatBtn').addEventListener('click', () => {
     chatHistory = [];
+    sessionId = crypto.randomUUID();
+    persistChat();
     chatMessages.innerHTML = `
         <div class="message system">
             <div class="message-content">Chat history cleared. Start a new conversation.</div>
@@ -275,6 +321,7 @@ async function loadProviderStatus() {
             updateProviderCard('providerOpenai', providers.openai);
             updateProviderCard('providerOllama', providers.ollama);
             updateProviderCard('providerAnthropic', providers.anthropic);
+            updateProviderCard('providerClaudeCodeOauth', providers.claudeCodeOauth);
         }
     } catch (error) {
         // Silently fail
@@ -295,6 +342,148 @@ function updateProviderCard(id, status) {
         statusEl.textContent = 'Not configured';
     }
 }
+
+// Telegram Settings
+async function loadTelegramSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/telegram/settings`);
+        if (response.ok) {
+            const data = await response.json();
+            const statusEl = document.getElementById('telegramStatus');
+            document.getElementById('telegramToken').value = '';
+            document.getElementById('telegramToken').placeholder = data.tokenMasked || '123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11';
+            document.getElementById('telegramAllowedUsers').value = data.allowedUsers || '';
+            if (data.configured) {
+                statusEl.textContent = 'Configured';
+                statusEl.className = 'telegram-status configured';
+            } else {
+                statusEl.textContent = 'Not configured';
+                statusEl.className = 'telegram-status';
+            }
+        }
+    } catch (error) {
+        // Silently fail
+    }
+}
+
+document.getElementById('saveTelegramBtn').addEventListener('click', async () => {
+    const token = document.getElementById('telegramToken').value.trim();
+    const allowedUsers = document.getElementById('telegramAllowedUsers').value.trim();
+
+    if (!token && !allowedUsers) {
+        showToast('Enter a bot token to save', 'error');
+        return;
+    }
+
+    const body = {};
+    if (token) body.token = token;
+    body.allowedUsers = allowedUsers;
+
+    try {
+        const response = await fetch(`${API_BASE}/telegram/settings`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+
+        if (response.ok) {
+            showToast('Telegram settings saved', 'success');
+            loadTelegramSettings();
+        } else {
+            showToast('Failed to save Telegram settings', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to save Telegram settings', 'error');
+    }
+});
+
+// MCP Servers
+async function loadMcpServers() {
+    const list = document.getElementById('mcpServerList');
+    try {
+        const response = await fetch(`${API_BASE}/mcp/servers`);
+        if (response.ok) {
+            const servers = await response.json();
+            if (servers.length === 0) {
+                list.innerHTML = '<p class="muted">No MCP servers configured</p>';
+                return;
+            }
+            list.innerHTML = servers.map(s => `
+                <div class="mcp-server-card">
+                    <div class="mcp-server-header">
+                        <span class="mcp-server-icon">${s.connected ? '🟢' : '🔴'}</span>
+                        <span class="mcp-server-name">${escapeHtml(s.name)}</span>
+                        ${s.dynamic ? `<button class="mcp-remove-btn" data-name="${escapeHtml(s.name)}" title="Remove">✕</button>` : ''}
+                    </div>
+                    <div class="mcp-server-details">
+                        ${s.connected ? s.toolCount + ' tool' + (s.toolCount !== 1 ? 's' : '') + ' available' : 'Disconnected'}
+                    </div>
+                    ${s.url ? `<div class="mcp-server-url">${escapeHtml(s.url)}</div>` : ''}
+                </div>
+            `).join('');
+
+            // Attach remove handlers
+            list.querySelectorAll('.mcp-remove-btn').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const name = btn.dataset.name;
+                    try {
+                        const resp = await fetch(`${API_BASE}/mcp/servers/${encodeURIComponent(name)}`, { method: 'DELETE' });
+                        if (resp.ok) {
+                            showToast('MCP server removed', 'success');
+                            loadMcpServers();
+                        } else {
+                            showToast('Failed to remove MCP server', 'error');
+                        }
+                    } catch (error) {
+                        showToast('Failed to remove MCP server', 'error');
+                    }
+                });
+            });
+        }
+    } catch (error) {
+        list.innerHTML = '<p class="muted">Failed to load MCP servers</p>';
+    }
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+}
+
+document.getElementById('addMcpServerBtn').addEventListener('click', async () => {
+    const name = document.getElementById('mcpName').value.trim();
+    const url = document.getElementById('mcpUrl').value.trim();
+    const authHeader = document.getElementById('mcpAuthHeader').value.trim();
+    const authValue = document.getElementById('mcpAuthValue').value.trim();
+
+    if (!name || !url) {
+        showToast('Name and URL are required', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/mcp/servers`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, url, authHeader: authHeader || null, authValue: authValue || null })
+        });
+
+        if (response.ok) {
+            showToast('MCP server saved', 'success');
+            document.getElementById('mcpName').value = '';
+            document.getElementById('mcpUrl').value = '';
+            document.getElementById('mcpAuthHeader').value = '';
+            document.getElementById('mcpAuthValue').value = '';
+            loadMcpServers();
+        } else {
+            const data = await response.json();
+            showToast(data.error || 'Failed to save MCP server', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to save MCP server', 'error');
+    }
+});
 
 // Sessions
 async function loadSessions() {
@@ -344,7 +533,42 @@ function showToast(message, type = 'success') {
     setTimeout(() => toast.remove(), 3000);
 }
 
+// Apply default model to the chat model selector
+function applyDefaultModel() {
+    if (settings.model) {
+        modelSelect.value = settings.model;
+        modelBadge.textContent = modelSelect.options[modelSelect.selectedIndex]?.text || settings.model;
+    }
+}
+
+// Fetch settings from server on startup
+async function fetchSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/settings`);
+        if (response.ok) {
+            const data = await response.json();
+            settings.agentName = data.agentName || settings.agentName;
+            settings.model = data.model || settings.model;
+            settings.fallbackModel = data.fallbackModel || '';
+            settings.instructions = data.instructions || settings.instructions;
+            settings.maxTurns = data.maxTurns || settings.maxTurns;
+            agentNameEl.textContent = settings.agentName;
+            applyDefaultModel();
+        }
+    } catch (error) {
+        // Use local defaults
+    }
+}
+
+// Restore chat history from localStorage on page load
+if (chatHistory.length > 0) {
+    for (const msg of chatHistory) {
+        addMessage(msg.role, msg.content);
+    }
+}
+
 // Init
+fetchSettings();
 checkHealth();
 setInterval(checkHealth, 30000);
 chatInput.focus();

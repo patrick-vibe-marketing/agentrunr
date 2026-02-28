@@ -3,11 +3,13 @@ package io.agentrunr.core;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.ai.tool.ToolCallback;
 
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
 
 class ToolRegistryTest {
 
@@ -91,5 +93,44 @@ class ToolRegistryTest {
         var result = registry.executeTool("echo", null, new AgentContext());
 
         assertEquals("Args: {}", result.value());
+    }
+
+    @Test
+    void shouldFindFunctionCallbacksByName() {
+        var mcpCallback = mock(ToolCallback.class);
+        registry.registerFunctionCallback("mcp_calendar", mcpCallback);
+
+        var callbacks = registry.getToolCallbacks(List.of("mcp_calendar"));
+
+        assertEquals(1, callbacks.size());
+        assertSame(mcpCallback, callbacks.get(0));
+    }
+
+    @Test
+    void shouldReturnAllToolCallbacks() {
+        var toolCb = mock(ToolCallback.class);
+        var mcpCb = mock(ToolCallback.class);
+        registry.registerToolCallback("my_tool", toolCb);
+        registry.registerFunctionCallback("mcp_tool", mcpCb);
+
+        var all = registry.getAllToolCallbacks();
+
+        assertEquals(2, all.size());
+        assertTrue(all.contains(toolCb));
+        assertTrue(all.contains(mcpCb));
+    }
+
+    @Test
+    void shouldReturnAllToolNames() {
+        registry.registerAgentTool("agent_tool", (args, ctx) -> AgentResult.of("ok"));
+        registry.registerToolCallback("spring_tool", mock(ToolCallback.class));
+        registry.registerFunctionCallback("mcp_tool", mock(ToolCallback.class));
+
+        var names = registry.getAllToolNames();
+
+        assertEquals(3, names.size());
+        assertTrue(names.contains("agent_tool"));
+        assertTrue(names.contains("spring_tool"));
+        assertTrue(names.contains("mcp_tool"));
     }
 }

@@ -49,7 +49,7 @@ public class SampleTools {
         toolRegistry.registerAgentTool("transfer_to_billing", (args, ctx) -> {
             Agent billingAgent = new Agent(
                     "BillingAgent",
-                    "gpt-4o",
+                    "gpt-4.1",
                     "You are a billing specialist. Help users with invoices, payments, and refunds. Be professional and thorough.",
                     java.util.List.of("get_current_time")
             );
@@ -59,7 +59,7 @@ public class SampleTools {
         toolRegistry.registerAgentTool("transfer_to_technical", (args, ctx) -> {
             Agent techAgent = new Agent(
                     "TechnicalAgent",
-                    "gpt-4o",
+                    "gpt-4.1",
                     "You are a technical support specialist. Help users troubleshoot issues with patience and clarity.",
                     java.util.List.of("get_current_time")
             );

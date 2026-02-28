@@ -15,7 +15,7 @@ class AgentTest {
 
         assertEquals("TestAgent", agent.name());
         assertEquals("You are a test agent.", agent.instructions());
-        assertEquals("gpt-4o", agent.resolvedModel());
+        assertEquals("gpt-4.1", agent.resolvedModel());
         assertTrue(agent.toolNames().isEmpty());
         assertEquals("auto", agent.toolChoice());
     }
@@ -39,7 +39,7 @@ class AgentTest {
     @Test
     void shouldResolveDynamicInstructions() {
         var agent = new Agent(
-                "DynAgent", "gpt-4o", null,
+                "DynAgent", "gpt-4.1", null,
                 ctx -> "Hello " + ctx.getOrDefault("user", "stranger") + "!",
                 List.of(), "auto"
         );
@@ -50,7 +50,7 @@ class AgentTest {
 
     @Test
     void shouldFallbackToDefaultInstructions() {
-        var agent = new Agent("Bare", "gpt-4o", null, null, List.of(), "auto");
+        var agent = new Agent("Bare", "gpt-4.1", null, null, List.of(), "auto");
 
         assertEquals("You are a helpful agent.", agent.resolveInstructions(Map.of()));
     }
@@ -59,6 +59,6 @@ class AgentTest {
     void shouldFallbackToDefaultModel() {
         var agent = new Agent("Agent", null, "Instructions", null, List.of(), "auto");
 
-        assertEquals("gpt-4o", agent.resolvedModel());
+        assertEquals("gpt-4.1", agent.resolvedModel());
     }
 }

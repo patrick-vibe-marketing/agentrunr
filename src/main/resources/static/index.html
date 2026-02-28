@@ -15,7 +15,7 @@
             <ul class="nav-links">
                 <li><a href="#" class="nav-link active" data-view="chat">💬 Chat</a></li>
                 <li><a href="#" class="nav-link" data-view="settings">⚙️ Settings</a></li>
-                <li><a href="/dashboard" class="nav-link" target="_blank">📊 JobRunr Dashboard</a></li>
+                <li><a href="http://localhost:8000/dashboard" class="nav-link" target="_blank">📊 JobRunr Dashboard</a></li>
             </ul>
             <div class="sidebar-footer">
                 <div class="status-indicator">
@@ -30,7 +30,7 @@
             <div id="chatView" class="view active">
                 <div class="chat-header">
                     <h2 id="agentName">Assistant</h2>
-                    <div class="model-badge" id="modelBadge">gpt-4o</div>
+                    <div class="model-badge" id="modelBadge">gpt-4.1</div>
                 </div>
                 <div class="chat-messages" id="chatMessages">
                     <div class="message system">
@@ -43,9 +43,11 @@
                     <div class="input-row">
                         <select id="modelSelect" class="model-select">
                             <optgroup label="OpenAI">
-                                <option value="gpt-4o" selected>GPT-4o</option>
-                                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                                <option value="o3-mini">o3-mini</option>
+                                <option value="gpt-4.1" selected>GPT-4.1</option>
+                                <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                                <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                                <option value="o3">o3</option>
+                                <option value="o4-mini">o4-mini</option>
                             </optgroup>
                             <optgroup label="Anthropic">
                                 <option value="anthropic:claude-sonnet-4-20250514">Claude Sonnet</option>
@@ -85,9 +87,11 @@
                             <label for="settingModel">Default Model</label>
                             <select id="settingModel">
                                 <optgroup label="OpenAI">
-                                    <option value="gpt-4o">GPT-4o</option>
-                                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                                    <option value="o3-mini">o3-mini</option>
+                                    <option value="gpt-4.1">GPT-4.1</option>
+                                    <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                                    <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                                    <option value="o3">o3</option>
+                                    <option value="o4-mini">o4-mini</option>
                                 </optgroup>
                                 <optgroup label="Anthropic">
                                     <option value="anthropic:claude-sonnet-4-20250514">Claude Sonnet</option>
@@ -99,6 +103,29 @@
                                     <option value="ollama:deepseek-r1">DeepSeek R1</option>
                                 </optgroup>
                             </select>
+                        </div>
+                        <div class="setting-group">
+                            <label for="settingFallbackModel">Fallback Model</label>
+                            <select id="settingFallbackModel">
+                                <option value="">None</option>
+                                <optgroup label="OpenAI">
+                                    <option value="gpt-4.1">GPT-4.1</option>
+                                    <option value="gpt-4.1-mini">GPT-4.1 Mini</option>
+                                    <option value="gpt-4.1-nano">GPT-4.1 Nano</option>
+                                    <option value="o3">o3</option>
+                                    <option value="o4-mini">o4-mini</option>
+                                </optgroup>
+                                <optgroup label="Anthropic">
+                                    <option value="anthropic:claude-sonnet-4-20250514">Claude Sonnet</option>
+                                    <option value="anthropic:claude-opus-4-20250514">Claude Opus</option>
+                                </optgroup>
+                                <optgroup label="Ollama">
+                                    <option value="ollama:llama3.2">Llama 3.2</option>
+                                    <option value="ollama:mistral">Mistral</option>
+                                    <option value="ollama:deepseek-r1">DeepSeek R1</option>
+                                </optgroup>
+                            </select>
+                            <span class="help-text">Used when the default model is unavailable</span>
                         </div>
                         <div class="setting-group">
                             <label for="settingInstructions">System Instructions</label>
@@ -128,7 +155,62 @@
                                 <div class="provider-name">Anthropic</div>
                                 <div class="provider-status">Checking...</div>
                             </div>
+                            <div class="provider-card" id="providerClaudeCodeOauth">
+                                <div class="provider-icon">⚪</div>
+                                <div class="provider-name">Claude Code OAuth</div>
+                                <div class="provider-status">Checking...</div>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>Telegram Bot</h3>
+                        <div class="setting-group">
+                            <label for="telegramToken">Bot Token</label>
+                            <input type="password" id="telegramToken" placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11">
+                            <span class="help-text">Get a token from <a href="https://t.me/BotFather" target="_blank">@BotFather</a> on Telegram</span>
+                        </div>
+                        <div class="setting-group">
+                            <label for="telegramAllowedUsers">Allowed User IDs</label>
+                            <input type="text" id="telegramAllowedUsers" placeholder="123456789,987654321">
+                            <span class="help-text">Comma-separated Telegram user IDs. Leave empty to allow all users.</span>
+                        </div>
+                        <div class="telegram-status" id="telegramStatus"></div>
+                        <div class="setting-group" style="margin-top: 12px;">
+                            <button id="saveTelegramBtn" class="btn-primary">Save Telegram Settings</button>
+                            <span class="help-text" style="margin-top: 8px; display: block;">Requires app restart for changes to take effect.</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h3>MCP Servers</h3>
+                        <div id="mcpServerList" class="mcp-server-list">
+                            <p class="muted">Loading MCP servers...</p>
+                        </div>
+                        <details class="mcp-add-form">
+                            <summary>Add MCP Server</summary>
+                            <div class="setting-group">
+                                <label for="mcpName">Server Name</label>
+                                <input type="text" id="mcpName" placeholder="my-server">
+                            </div>
+                            <div class="setting-group">
+                                <label for="mcpUrl">SSE Endpoint URL</label>
+                                <input type="text" id="mcpUrl" placeholder="https://host/path/sse">
+                                <span class="help-text">URL must end with /sse for MCP SSE transport</span>
+                            </div>
+                            <div class="setting-group">
+                                <label for="mcpAuthHeader">Auth Header Name <span class="muted">(optional)</span></label>
+                                <input type="text" id="mcpAuthHeader" placeholder="Authorization">
+                            </div>
+                            <div class="setting-group">
+                                <label for="mcpAuthValue">Auth Header Value <span class="muted">(optional)</span></label>
+                                <input type="password" id="mcpAuthValue" placeholder="Bearer token or password">
+                            </div>
+                            <div class="setting-group" style="margin-top: 12px;">
+                                <button id="addMcpServerBtn" class="btn-primary">Save MCP Server</button>
+                                <span class="help-text" style="margin-top: 8px; display: block;">Requires app restart for the server to connect.</span>
+                            </div>
+                        </details>
                     </div>
 
                     <div class="settings-section">

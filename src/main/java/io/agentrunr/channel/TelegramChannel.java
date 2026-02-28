@@ -2,12 +2,11 @@ package io.agentrunr.channel;
 
 import io.agentrunr.core.*;
 import io.agentrunr.memory.FileMemoryStore;
+import io.agentrunr.setup.CredentialStore;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -34,36 +33,43 @@ import java.util.concurrent.TimeUnit;
  * </pre>
  */
 @Component
-@ConditionalOnProperty(name = "agent.telegram.enabled", havingValue = "true")
 public class TelegramChannel {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramChannel.class);
     private static final String API_BASE = "https://api.telegram.org/bot";
 
-    @Value("${agent.telegram.token}")
-    private String botToken;
-
-    @Value("${agent.telegram.allowed-users:}")
-    private String allowedUsers;
-
     private final AgentRunner agentRunner;
     private final AgentConfigurer agentConfigurer;
     private final FileMemoryStore memoryStore;
     private final ObjectMapper objectMapper;
+    private final CredentialStore credentialStore;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
+    private String botToken;
+    private String allowedUsers;
     private long lastUpdateId = 0;
 
     public TelegramChannel(AgentRunner agentRunner, AgentConfigurer agentConfigurer,
-                           FileMemoryStore memoryStore, ObjectMapper objectMapper) {
+                           FileMemoryStore memoryStore, ObjectMapper objectMapper,
+                           CredentialStore credentialStore) {
         this.agentRunner = agentRunner;
         this.agentConfigurer = agentConfigurer;
         this.memoryStore = memoryStore;
         this.objectMapper = objectMapper;
+        this.credentialStore = credentialStore;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void start() {
+        botToken = credentialStore.getApiKey("telegram_token");
+        allowedUsers = credentialStore.getApiKey("telegram_allowed_users");
+        if (allowedUsers == null) allowedUsers = "";
+
+        if (botToken == null || botToken.isBlank()) {
+            log.info("Telegram channel disabled — no bot token configured");
+            return;
+        }
+
         log.info("Telegram channel starting with long polling...");
         executor.scheduleWithFixedDelay(this::pollUpdates, 0, 1, TimeUnit.SECONDS);
     }

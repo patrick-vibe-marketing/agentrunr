@@ -7,6 +7,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
+import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.stereotype.Component;
 
@@ -31,7 +32,7 @@ import java.util.Map;
  * <p>Supports multiple LLM providers (OpenAI, Ollama, Anthropic) via the ModelRouter.
  * Each agent can specify its preferred model using provider prefixes:</p>
  * <ul>
- *   <li>{@code "gpt-4o"} — OpenAI (default)</li>
+ *   <li>{@code "gpt-4.1"} — OpenAI (default)</li>
  *   <li>{@code "ollama:llama3"} — local Ollama</li>
  *   <li>{@code "anthropic:claude-sonnet-4-20250514"} — Anthropic</li>
  * </ul>
@@ -86,22 +87,23 @@ public class AgentRunner {
             log.debug("Using provider '{}' with model '{}'", resolved.provider(), resolved.modelName());
 
             // Build the prompt with system instructions and conversation history
-            String systemInstructions = activeAgent.resolveInstructions(context.toMap());
+            String systemInstructions = enrichInstructions(activeAgent.resolveInstructions(context.toMap()), activeAgent);
             List<Message> springMessages = toSpringMessages(systemInstructions, history);
 
             // Configure tool calling options
             ChatClient.ChatClientRequestSpec requestSpec = ChatClient.builder(resolved.chatModel())
                     .build()
                     .prompt()
-                    .messages(springMessages);
+                    .messages(springMessages)
+                    .options(ChatOptions.builder().model(resolved.modelName()).maxTokens(4096).build());
 
-            // Add tools if the agent has any
+            // Add tools: explicit list if specified, otherwise all registered tools
             List<String> tools = activeAgent.toolNames();
-            if (tools != null && !tools.isEmpty()) {
-                var toolCallbacks = toolRegistry.getToolCallbacks(tools);
-                if (!toolCallbacks.isEmpty()) {
-                    requestSpec = requestSpec.tools(toolCallbacks);
-                }
+            var toolCallbacks = (tools != null && !tools.isEmpty())
+                    ? toolRegistry.getToolCallbacks(tools)
+                    : toolRegistry.getAllToolCallbacks();
+            if (!toolCallbacks.isEmpty()) {
+                requestSpec = requestSpec.toolCallbacks(toolCallbacks.toArray(new org.springframework.ai.tool.ToolCallback[0]));
             }
 
             // Call the LLM
@@ -193,14 +195,15 @@ public class AgentRunner {
                     ChatClient.ChatClientRequestSpec requestSpec = ChatClient.builder(resolved.chatModel())
                             .build()
                             .prompt()
-                            .messages(springMessages);
+                            .messages(springMessages)
+                            .options(ChatOptions.builder().model(resolved.modelName()).maxTokens(4096).build());
 
                     List<String> tools = activeAgent.toolNames();
-                    if (tools != null && !tools.isEmpty()) {
-                        var toolCallbacks = toolRegistry.getToolCallbacks(tools);
-                        if (!toolCallbacks.isEmpty()) {
-                            requestSpec = requestSpec.tools(toolCallbacks);
-                        }
+                    var toolCallbacks = (tools != null && !tools.isEmpty())
+                            ? toolRegistry.getToolCallbacks(tools)
+                            : toolRegistry.getAllToolCallbacks();
+                    if (!toolCallbacks.isEmpty()) {
+                        requestSpec = requestSpec.toolCallbacks(toolCallbacks.toArray(new org.springframework.ai.tool.ToolCallback[0]));
                     }
 
                     // Try streaming
@@ -264,6 +267,21 @@ public class AgentRunner {
         });
 
         return sink.asFlux();
+    }
+
+    /**
+     * Enriches system instructions with the agent's name and available tools.
+     */
+    private String enrichInstructions(String baseInstructions, Agent agent) {
+        var sb = new StringBuilder(baseInstructions);
+        sb.append("\n\nYour name is ").append(agent.name()).append(".");
+
+        List<String> allToolNames = toolRegistry.getAllToolNames();
+        if (!allToolNames.isEmpty()) {
+            sb.append("\n\nYou have the following tools available: ").append(String.join(", ", allToolNames)).append(".");
+            sb.append(" Use them proactively when they can help answer the user's question.");
+        }
+        return sb.toString();
     }
 
     /**

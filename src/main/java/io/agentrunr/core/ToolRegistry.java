@@ -61,11 +61,15 @@ public class ToolRegistry {
 
     /**
      * Returns tool callbacks for the given tool names.
+     * Searches both @Tool callbacks and MCP function callbacks.
      */
     public List<ToolCallback> getToolCallbacks(List<String> toolNames) {
         List<ToolCallback> callbacks = new ArrayList<>();
         for (String name : toolNames) {
             ToolCallback cb = toolCallbacks.get(name);
+            if (cb == null) {
+                cb = functionCallbacks.get(name);
+            }
             if (cb != null) {
                 callbacks.add(cb);
             } else if (!agentTools.containsKey(name)) {
@@ -73,6 +77,27 @@ public class ToolRegistry {
             }
         }
         return callbacks;
+    }
+
+    /**
+     * Returns all registered tool callbacks (@Tool + MCP).
+     * Used when an agent has no explicit tool list, meaning "use everything available."
+     */
+    public List<ToolCallback> getAllToolCallbacks() {
+        List<ToolCallback> all = new ArrayList<>(toolCallbacks.values());
+        all.addAll(functionCallbacks.values());
+        return all;
+    }
+
+    /**
+     * Returns all registered tool names across all categories (agent tools, @Tool, MCP).
+     */
+    public List<String> getAllToolNames() {
+        List<String> names = new ArrayList<>();
+        names.addAll(agentTools.keySet());
+        names.addAll(toolCallbacks.keySet());
+        names.addAll(functionCallbacks.keySet());
+        return names;
     }
 
     /**

@@ -1,5 +1,6 @@
 package io.agentrunr.setup;
 
+import io.agentrunr.config.ClaudeCodeOAuthProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -39,8 +40,10 @@ public class CredentialStore {
 
     private final Map<String, String> credentials = new ConcurrentHashMap<>();
     private volatile boolean loaded = false;
+    private final ClaudeCodeOAuthProvider claudeCodeOAuthProvider;
 
-    public CredentialStore() {
+    public CredentialStore(ClaudeCodeOAuthProvider claudeCodeOAuthProvider) {
+        this.claudeCodeOAuthProvider = claudeCodeOAuthProvider;
         loadIfExists();
     }
 
@@ -49,7 +52,8 @@ public class CredentialStore {
      */
     public boolean isConfigured() {
         return hasKey("openai") || hasKey("anthropic")
-                || hasEnvKey("OPENAI_API_KEY") || hasEnvKey("ANTHROPIC_API_KEY");
+                || hasEnvKey("OPENAI_API_KEY") || hasEnvKey("ANTHROPIC_API_KEY")
+                || claudeCodeOAuthProvider.getAccessToken().isPresent();
     }
 
     /**
@@ -63,6 +67,8 @@ public class CredentialStore {
         return switch (provider) {
             case "openai" -> getEnvOrNull("OPENAI_API_KEY");
             case "anthropic" -> getEnvOrNull("ANTHROPIC_API_KEY");
+            case "telegram_token" -> getEnvOrNull("TELEGRAM_BOT_TOKEN");
+            case "telegram_allowed_users" -> getEnvOrNull("TELEGRAM_ALLOWED_USERS");
             default -> null;
         };
     }
@@ -108,7 +114,9 @@ public class CredentialStore {
     public Map<String, Boolean> getProviderStatus() {
         return Map.of(
                 "openai", getApiKey("openai") != null,
-                "anthropic", getApiKey("anthropic") != null
+                "anthropic", getApiKey("anthropic") != null,
+                "claudeCodeOauth", claudeCodeOAuthProvider.getAccessToken().isPresent(),
+                "telegram", getApiKey("telegram_token") != null
         );
     }
 

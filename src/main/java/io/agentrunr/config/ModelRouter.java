@@ -15,8 +15,8 @@ import java.util.Map;
  *
  * <p>Agents can specify a model string like:</p>
  * <ul>
- *   <li>{@code "gpt-4o"} — routes to OpenAI (default)</li>
- *   <li>{@code "openai:gpt-4o-mini"} — explicit OpenAI</li>
+ *   <li>{@code "gpt-4.1"} — routes to OpenAI (default)</li>
+ *   <li>{@code "openai:gpt-4.1-mini"} — explicit OpenAI</li>
  *   <li>{@code "ollama:llama3"} — routes to local Ollama</li>
  *   <li>{@code "anthropic:claude-sonnet-4-20250514"} — routes to Anthropic</li>
  * </ul>
@@ -62,12 +62,12 @@ public class ModelRouter {
     /**
      * Resolves a model string to a ChatModel and extracted model name.
      *
-     * @param modelSpec model specification (e.g., "ollama:llama3", "gpt-4o")
+     * @param modelSpec model specification (e.g., "ollama:llama3", "gpt-4.1")
      * @return resolved model info
      */
     public ResolvedModel resolve(String modelSpec) {
         if (modelSpec == null || modelSpec.isBlank()) {
-            return new ResolvedModel(defaultModel, "gpt-4o", "openai");
+            return new ResolvedModel(defaultModel, "gpt-4.1", "openai");
         }
 
         // Check for provider prefix
@@ -84,7 +84,7 @@ public class ModelRouter {
 
         // Auto-detect provider from model name
         String lower = modelSpec.toLowerCase();
-        if (lower.startsWith("gpt-") || lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4")) {
+        if (lower.startsWith("gpt-") || lower.startsWith("o1") || lower.startsWith("o3") || lower.startsWith("o4") || lower.startsWith("o5")) {
             return new ResolvedModel(providers.get("openai"), modelSpec, "openai");
         }
         if (lower.startsWith("claude")) {
