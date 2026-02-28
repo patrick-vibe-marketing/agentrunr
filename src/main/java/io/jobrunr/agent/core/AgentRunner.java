@@ -85,7 +85,7 @@ public class AgentRunner {
             if (tools != null && !tools.isEmpty()) {
                 var toolCallbacks = toolRegistry.getToolCallbacks(tools);
                 if (!toolCallbacks.isEmpty()) {
-                    requestSpec = requestSpec.toolCallbacks(toolCallbacks.toArray(new org.springframework.ai.tool.ToolCallback[0]));
+                    requestSpec = requestSpec.tools(toolCallbacks);
                 }
             }
 
