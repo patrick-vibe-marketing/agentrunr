@@ -53,6 +53,16 @@ org:
     misc:
       allow-anonymous-data-usage: false
 
+  # Telegram channel
+  telegram:
+    enabled: ${TELEGRAM_ENABLED:false}
+    token: ${TELEGRAM_BOT_TOKEN:}
+    allowed-users: ${TELEGRAM_ALLOWED_USERS:}
+
+  # Memory
+  memory:
+    path: ${AGENT_MEMORY_PATH:./data/memory}
+
 # Server
 server:
   port: 8080
