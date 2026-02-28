@@ -28,7 +28,11 @@ public class ChatController {
      */
     @PostMapping("/chat")
     public ResponseEntity<ChatResponseDto> chat(@RequestBody ChatRequestDto request) {
-        Agent agent = agentConfigurer.getDefaultAgent();
+        Agent defaultAgent = agentConfigurer.getDefaultAgent();
+        // Allow overriding model per request
+        Agent agent = (request.model() != null && !request.model().isBlank())
+                ? new Agent(defaultAgent.name(), request.model(), defaultAgent.instructions(), defaultAgent.toolNames())
+                : defaultAgent;
 
         List<ChatMessage> messages = request.messages().stream()
                 .map(m -> new ChatMessage(
@@ -66,7 +70,8 @@ public class ChatController {
     public record ChatRequestDto(
             List<MessageDto> messages,
             Map<String, String> contextVariables,
-            int maxTurns
+            int maxTurns,
+            String model
     ) {}
 
     public record MessageDto(String role, String content) {}

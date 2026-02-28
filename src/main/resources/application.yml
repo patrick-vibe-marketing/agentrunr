@@ -7,6 +7,16 @@ spring:
       chat:
         options:
           model: gpt-4o
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      chat:
+        options:
+          model: ${OLLAMA_MODEL:llama3.2}
+    anthropic:
+      api-key: ${ANTHROPIC_API_KEY:sk-placeholder}
+      chat:
+        options:
+          model: claude-sonnet-4-20250514
     # MCP servers (uncomment and configure as needed)
     # mcp:
     #   client:

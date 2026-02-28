@@ -2,6 +2,7 @@ package io.jobrunr.agent.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import io.jobrunr.agent.config.ModelRouter;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.*;
 import org.springframework.ai.chat.model.ChatModel;
@@ -25,6 +26,14 @@ import java.util.Map;
  *   <li>Looping until the LLM responds without tool calls, or max turns is reached</li>
  * </ol>
  *
+ * <p>Supports multiple LLM providers (OpenAI, Ollama, Anthropic) via the ModelRouter.
+ * Each agent can specify its preferred model using provider prefixes:</p>
+ * <ul>
+ *   <li>{@code "gpt-4o"} — OpenAI (default)</li>
+ *   <li>{@code "ollama:llama3"} — local Ollama</li>
+ *   <li>{@code "anthropic:claude-sonnet-4-20250514"} — Anthropic</li>
+ * </ul>
+ *
  * <p>This is the Java equivalent of Swarm's {@code client.run()} method.</p>
  */
 @Component
@@ -33,11 +42,11 @@ public class AgentRunner {
     private static final Logger log = LoggerFactory.getLogger(AgentRunner.class);
     private static final int DEFAULT_MAX_TURNS = 10;
 
-    private final ChatModel chatModel;
+    private final ModelRouter modelRouter;
     private final ToolRegistry toolRegistry;
 
-    public AgentRunner(ChatModel chatModel, ToolRegistry toolRegistry) {
-        this.chatModel = chatModel;
+    public AgentRunner(ModelRouter modelRouter, ToolRegistry toolRegistry) {
+        this.modelRouter = modelRouter;
         this.toolRegistry = toolRegistry;
     }
 
@@ -70,12 +79,16 @@ public class AgentRunner {
             turns++;
             log.debug("Turn {}/{} with agent '{}'", turns, maxTurns, activeAgent.name());
 
+            // Resolve model for the active agent
+            ModelRouter.ResolvedModel resolved = modelRouter.resolve(activeAgent.resolvedModel());
+            log.debug("Using provider '{}' with model '{}'", resolved.provider(), resolved.modelName());
+
             // Build the prompt with system instructions and conversation history
             String systemInstructions = activeAgent.resolveInstructions(context.toMap());
             List<Message> springMessages = toSpringMessages(systemInstructions, history);
 
             // Configure tool calling options
-            ChatClient.ChatClientRequestSpec requestSpec = ChatClient.builder(chatModel)
+            ChatClient.ChatClientRequestSpec requestSpec = ChatClient.builder(resolved.chatModel())
                     .build()
                     .prompt()
                     .messages(springMessages);
