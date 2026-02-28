@@ -84,6 +84,8 @@ jobrunr:
 # Memory
 memory:
   path: ${AGENT_MEMORY_PATH:./data/memory}
+  sqlite:
+    enabled: true
 
 # Server
 server:

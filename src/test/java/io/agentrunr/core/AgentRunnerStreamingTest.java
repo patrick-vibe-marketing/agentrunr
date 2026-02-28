@@ -32,7 +32,7 @@ class AgentRunnerStreamingTest {
         when(modelRouter.resolve(any())).thenReturn(
                 new ModelRouter.ResolvedModel(chatModel, "test-model", "test"));
 
-        agentRunner = new AgentRunner(modelRouter, toolRegistry);
+        agentRunner = new AgentRunner(modelRouter, toolRegistry, null);
     }
 
     @Test

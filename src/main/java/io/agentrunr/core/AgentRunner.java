@@ -9,6 +9,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import reactor.core.publisher.Flux;
@@ -47,10 +48,13 @@ public class AgentRunner {
 
     private final ModelRouter modelRouter;
     private final ToolRegistry toolRegistry;
+    private final @Nullable SystemPromptBuilder systemPromptBuilder;
 
-    public AgentRunner(ModelRouter modelRouter, ToolRegistry toolRegistry) {
+    public AgentRunner(ModelRouter modelRouter, ToolRegistry toolRegistry,
+                       @Nullable SystemPromptBuilder systemPromptBuilder) {
         this.modelRouter = modelRouter;
         this.toolRegistry = toolRegistry;
+        this.systemPromptBuilder = systemPromptBuilder;
     }
 
     /**
@@ -86,8 +90,15 @@ public class AgentRunner {
             ModelRouter.ResolvedModel resolved = modelRouter.resolve(activeAgent.resolvedModel());
             log.debug("Using provider '{}' with model '{}'", resolved.provider(), resolved.modelName());
 
-            // Build the prompt with system instructions and conversation history
-            String systemInstructions = enrichInstructions(activeAgent.resolveInstructions(context.toMap()), activeAgent);
+            // Extract latest user message for memory context
+            String latestUserMessage = history.stream()
+                    .filter(m -> m.role() == ChatMessage.Role.USER)
+                    .reduce((a, b) -> b)
+                    .map(ChatMessage::content)
+                    .orElse("");
+
+            // Build the prompt with system instructions, identity, and memory context
+            String systemInstructions = enrichInstructions(activeAgent.resolveInstructions(context.toMap()), activeAgent, latestUserMessage);
             List<Message> springMessages = toSpringMessages(systemInstructions, history);
 
             // Configure tool calling options
@@ -189,7 +200,15 @@ public class AgentRunner {
                     log.debug("Stream turn {}/{} with agent '{}'", turns, maxTurns, activeAgent.name());
 
                     ModelRouter.ResolvedModel resolved = modelRouter.resolve(activeAgent.resolvedModel());
-                    String systemInstructions = activeAgent.resolveInstructions(context.toMap());
+
+                    // Extract latest user message for memory context
+                    String latestUserMessage = history.stream()
+                            .filter(m -> m.role() == ChatMessage.Role.USER)
+                            .reduce((a, b) -> b)
+                            .map(ChatMessage::content)
+                            .orElse("");
+
+                    String systemInstructions = enrichInstructions(activeAgent.resolveInstructions(context.toMap()), activeAgent, latestUserMessage);
                     List<Message> springMessages = toSpringMessages(systemInstructions, history);
 
                     ChatClient.ChatClientRequestSpec requestSpec = ChatClient.builder(resolved.chatModel())
@@ -270,9 +289,15 @@ public class AgentRunner {
     }
 
     /**
-     * Enriches system instructions with the agent's name and available tools.
+     * Enriches system instructions with identity, memory context, tools, and safety rules.
+     * Uses SystemPromptBuilder when available, falls back to basic enrichment.
      */
-    private String enrichInstructions(String baseInstructions, Agent agent) {
+    private String enrichInstructions(String baseInstructions, Agent agent, String userMessage) {
+        if (systemPromptBuilder != null) {
+            return systemPromptBuilder.build(baseInstructions, agent.name(), userMessage);
+        }
+
+        // Fallback: basic enrichment without memory or identity
         var sb = new StringBuilder(baseInstructions);
         sb.append("\n\nYour name is ").append(agent.name()).append(".");
 

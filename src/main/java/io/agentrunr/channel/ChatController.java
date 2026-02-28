@@ -2,6 +2,7 @@ package io.agentrunr.channel;
 
 import io.agentrunr.core.*;
 import io.agentrunr.memory.FileMemoryStore;
+import io.agentrunr.memory.SQLiteMemoryStore;
 import io.agentrunr.security.InputSanitizer;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,13 +26,16 @@ public class ChatController {
     private final AgentConfigurer agentConfigurer;
     private final InputSanitizer inputSanitizer;
     private final FileMemoryStore memoryStore;
+    private final SQLiteMemoryStore sqliteMemory;
 
     public ChatController(AgentRunner agentRunner, AgentConfigurer agentConfigurer,
-                          InputSanitizer inputSanitizer, FileMemoryStore memoryStore) {
+                          InputSanitizer inputSanitizer, FileMemoryStore memoryStore,
+                          SQLiteMemoryStore sqliteMemory) {
         this.agentRunner = agentRunner;
         this.agentConfigurer = agentConfigurer;
         this.inputSanitizer = inputSanitizer;
         this.memoryStore = memoryStore;
+        this.sqliteMemory = sqliteMemory;
     }
 
     /**
@@ -60,11 +64,12 @@ public class ChatController {
                 ))
                 .toList();
 
-        // Log the latest user message
+        // Log the latest user message to both file and SQLite memory
         if (!messages.isEmpty()) {
             ChatMessage lastUser = messages.getLast();
             if (lastUser.role() == ChatMessage.Role.USER) {
                 memoryStore.appendMessage(sessionId, "user", lastUser.content());
+                sqliteMemory.storeConversationMessage(sessionId, "user", lastUser.content());
             }
         }
 
@@ -73,12 +78,15 @@ public class ChatController {
         if (request.contextVariables() != null) {
             context.merge(request.contextVariables());
         }
+        // Set session_id so memory tools can scope to this session
+        context.set("session_id", sessionId);
 
         AgentResponse response = agentRunner.run(agent, messages, context, request.maxTurns() > 0 ? request.maxTurns() : 10);
 
-        // Persist assistant response and context
+        // Persist assistant response to both file and SQLite memory
         memoryStore.appendMessage(sessionId, "assistant", response.lastMessage());
         memoryStore.saveContext(sessionId, response.contextVariables());
+        sqliteMemory.storeConversationMessage(sessionId, "assistant", response.lastMessage());
 
         return ResponseEntity.ok(new ChatResponseDto(
                 response.lastMessage(),
@@ -113,11 +121,12 @@ public class ChatController {
                 ))
                 .toList();
 
-        // Log the latest user message
+        // Log the latest user message to both stores
         if (!messages.isEmpty()) {
             ChatMessage lastUser = messages.getLast();
             if (lastUser.role() == ChatMessage.Role.USER) {
                 memoryStore.appendMessage(sessionId, "user", lastUser.content());
+                sqliteMemory.storeConversationMessage(sessionId, "user", lastUser.content());
             }
         }
 
@@ -126,6 +135,7 @@ public class ChatController {
         if (request.contextVariables() != null) {
             context.merge(request.contextVariables());
         }
+        context.set("session_id", sessionId);
 
         // Emit session ID as first event, then stream tokens, then persist
         Flux<ServerSentEvent<String>> sessionEvent = Flux.just(
@@ -144,6 +154,7 @@ public class ChatController {
                 .doOnComplete(() -> {
                     memoryStore.appendMessage(sessionId, "assistant", fullResponse.toString());
                     memoryStore.saveContext(sessionId, context.toMap());
+                    sqliteMemory.storeConversationMessage(sessionId, "assistant", fullResponse.toString());
                 });
 
         return sessionEvent.concatWith(persistingStream);

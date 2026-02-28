@@ -40,7 +40,7 @@ public class FileMemoryStore {
 
     private final Path basePath;
 
-    public FileMemoryStore(@Value("${agent.memory.path:./data/memory}") String memoryPath) {
+    public FileMemoryStore(@Value("${memory.path:./data/memory}") String memoryPath) {
         this.basePath = Path.of(memoryPath);
         ensureDirectory(basePath);
         ensureDirectory(basePath.resolve("sessions"));

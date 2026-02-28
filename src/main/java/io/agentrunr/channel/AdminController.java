@@ -4,6 +4,8 @@ import io.agentrunr.config.ClaudeCodeOAuthProvider;
 import io.agentrunr.config.McpServerManager;
 import io.agentrunr.config.ModelRouter;
 import io.agentrunr.memory.FileMemoryStore;
+import io.agentrunr.memory.Memory;
+import io.agentrunr.memory.MemoryCategory;
 import io.agentrunr.setup.CredentialStore;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -24,6 +26,7 @@ public class AdminController {
 
     private final ModelRouter modelRouter;
     private final FileMemoryStore memoryStore;
+    private final Memory memory;
     private final ClaudeCodeOAuthProvider claudeCodeOAuthProvider;
     private final CredentialStore credentialStore;
     private final McpServerManager mcpServerManager;
@@ -31,12 +34,14 @@ public class AdminController {
     public AdminController(
             ModelRouter modelRouter,
             FileMemoryStore memoryStore,
+            Memory memory,
             CredentialStore credentialStore,
             McpServerManager mcpServerManager,
             @Autowired(required = false) ClaudeCodeOAuthProvider claudeCodeOAuthProvider
     ) {
         this.modelRouter = modelRouter;
         this.memoryStore = memoryStore;
+        this.memory = memory;
         this.credentialStore = credentialStore;
         this.mcpServerManager = mcpServerManager;
         this.claudeCodeOAuthProvider = claudeCodeOAuthProvider;
@@ -79,6 +84,20 @@ public class AdminController {
     @GetMapping("/sessions")
     public ResponseEntity<List<String>> getSessions() {
         return ResponseEntity.ok(memoryStore.listSessions());
+    }
+
+    /**
+     * Returns memory system status: total count, health, per-category counts.
+     */
+    @GetMapping("/memory/status")
+    public ResponseEntity<Map<String, Object>> getMemoryStatus() {
+        Map<String, Object> status = new HashMap<>();
+        status.put("healthy", memory.healthCheck());
+        status.put("totalCount", memory.count());
+        status.put("coreCount", memory.list(MemoryCategory.CORE, null).size());
+        status.put("dailyCount", memory.list(MemoryCategory.DAILY, null).size());
+        status.put("conversationCount", memory.list(MemoryCategory.CONVERSATION, null).size());
+        return ResponseEntity.ok(status);
     }
 
     private ProviderInfo checkProvider(String provider, String defaultModel) {
