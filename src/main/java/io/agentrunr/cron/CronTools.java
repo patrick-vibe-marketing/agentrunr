@@ -33,9 +33,21 @@ public class CronTools {
 
     @PostConstruct
     public void registerTools() {
-        toolRegistry.registerAgentTool("schedule_task", this::scheduleTask);
-        toolRegistry.registerAgentTool("list_scheduled_tasks", this::listScheduledTasks);
-        toolRegistry.registerAgentTool("cancel_scheduled_task", this::cancelScheduledTask);
+        toolRegistry.registerAgentTool("schedule_task",
+                "Schedule a recurring or one-shot task. Provide 'name' and 'message' (the prompt to execute), plus one of: 'cron' (cron expression), 'interval_seconds' (repeat interval), or 'execute_at' (ISO-8601 timestamp for one-shot).",
+                """
+                {"type":"object","properties":{"name":{"type":"string","description":"Task name"},"message":{"type":"string","description":"The prompt/instruction to execute on schedule"},"cron":{"type":"string","description":"Cron expression (e.g. */5 * * * *)"},"interval_seconds":{"type":"integer","description":"Repeat every N seconds"},"execute_at":{"type":"string","description":"ISO-8601 timestamp for one-shot execution"}},"required":["name","message"]}""",
+                this::scheduleTask);
+        toolRegistry.registerAgentTool("list_scheduled_tasks",
+                "List all currently scheduled recurring tasks.",
+                """
+                {"type":"object","properties":{}}""",
+                this::listScheduledTasks);
+        toolRegistry.registerAgentTool("cancel_scheduled_task",
+                "Cancel a scheduled task by its ID.",
+                """
+                {"type":"object","properties":{"task_id":{"type":"string","description":"The task ID to cancel"}},"required":["task_id"]}""",
+                this::cancelScheduledTask);
         log.info("Registered 3 cron tools");
     }
 

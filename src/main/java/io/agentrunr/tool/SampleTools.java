@@ -29,42 +29,55 @@ public class SampleTools {
 
     @PostConstruct
     public void registerTools() {
-        // Simple tool: get current time
-        toolRegistry.registerAgentTool("get_current_time", (args, ctx) -> {
-            String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-            return AgentResult.of("Current time: " + time);
-        });
+        toolRegistry.registerAgentTool("get_current_time",
+                "Get the current date and time.",
+                """
+                {"type":"object","properties":{}}""",
+                (args, ctx) -> {
+                    String time = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+                    return AgentResult.of("Current time: " + time);
+                });
 
-        // Tool with context: greet user
-        toolRegistry.registerAgentTool("greet_user", (args, ctx) -> {
-            String name = (String) args.getOrDefault("name", ctx.get("user_name", "stranger"));
-            ctx.set("greeted", "true");
-            return AgentResult.withContext(
-                    "Hello, " + name + "! How can I help you today?",
-                    Map.of("user_name", name)
-            );
-        });
+        toolRegistry.registerAgentTool("greet_user",
+                "Greet a user by name.",
+                """
+                {"type":"object","properties":{"name":{"type":"string","description":"Name to greet"}},"required":[]}""",
+                (args, ctx) -> {
+                    String name = (String) args.getOrDefault("name", ctx.get("user_name", "stranger"));
+                    ctx.set("greeted", "true");
+                    return AgentResult.withContext(
+                            "Hello, " + name + "! How can I help you today?",
+                            Map.of("user_name", name)
+                    );
+                });
 
-        // Handoff tool: transfer to specialist
-        toolRegistry.registerAgentTool("transfer_to_billing", (args, ctx) -> {
-            Agent billingAgent = new Agent(
-                    "BillingAgent",
-                    "gpt-4.1",
-                    "You are a billing specialist. Help users with invoices, payments, and refunds. Be professional and thorough.",
-                    java.util.List.of("get_current_time")
-            );
-            return AgentResult.handoff(billingAgent);
-        });
+        toolRegistry.registerAgentTool("transfer_to_billing",
+                "Transfer the conversation to a billing specialist.",
+                """
+                {"type":"object","properties":{}}""",
+                (args, ctx) -> {
+                    Agent billingAgent = new Agent(
+                            "BillingAgent",
+                            "gpt-4.1",
+                            "You are a billing specialist. Help users with invoices, payments, and refunds. Be professional and thorough.",
+                            java.util.List.of("get_current_time")
+                    );
+                    return AgentResult.handoff(billingAgent);
+                });
 
-        toolRegistry.registerAgentTool("transfer_to_technical", (args, ctx) -> {
-            Agent techAgent = new Agent(
-                    "TechnicalAgent",
-                    "gpt-4.1",
-                    "You are a technical support specialist. Help users troubleshoot issues with patience and clarity.",
-                    java.util.List.of("get_current_time")
-            );
-            return AgentResult.handoff(techAgent);
-        });
+        toolRegistry.registerAgentTool("transfer_to_technical",
+                "Transfer the conversation to a technical support specialist.",
+                """
+                {"type":"object","properties":{}}""",
+                (args, ctx) -> {
+                    Agent techAgent = new Agent(
+                            "TechnicalAgent",
+                            "gpt-4.1",
+                            "You are a technical support specialist. Help users troubleshoot issues with patience and clarity.",
+                            java.util.List.of("get_current_time")
+                    );
+                    return AgentResult.handoff(techAgent);
+                });
 
         log.info("Registered {} sample tools", 4);
     }

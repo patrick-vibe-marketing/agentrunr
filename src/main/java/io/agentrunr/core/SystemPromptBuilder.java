@@ -89,9 +89,13 @@ public class SystemPromptBuilder {
         if (!allToolNames.isEmpty()) {
             sb.append("## Available Tools\n");
             sb.append("You have the following tools available: ").append(String.join(", ", allToolNames)).append(".\n");
-            sb.append("Use them proactively when they can help answer the user's question.\n");
-            sb.append("You can use memory_store to save important facts, preferences, or decisions.\n");
-            sb.append("You can use memory_recall to search for relevant memories.\n\n");
+            sb.append("""
+                    IMPORTANT: Use tools proactively. Do NOT just describe what you would do — actually call the tools.
+                    When a user asks for something recurring or scheduled, call schedule_task immediately.
+                    When a user asks for information, use web_search or web_fetch to get it.
+                    When a user asks you to remember something, call memory_store.
+                    Act first, explain after.
+                    """);
         }
 
         // 7. Safety rules

@@ -34,10 +34,26 @@ public class MemoryTools {
 
     @PostConstruct
     public void registerTools() {
-        toolRegistry.registerAgentTool("memory_store", this::memoryStore);
-        toolRegistry.registerAgentTool("memory_recall", this::memoryRecall);
-        toolRegistry.registerAgentTool("memory_forget", this::memoryForget);
-        toolRegistry.registerAgentTool("memory_list", this::memoryList);
+        toolRegistry.registerAgentTool("memory_store",
+                "Store a fact or piece of information in long-term memory. Use for things the user wants remembered.",
+                """
+                {"type":"object","properties":{"key":{"type":"string","description":"Unique key for this memory"},"content":{"type":"string","description":"The content to remember"},"category":{"type":"string","enum":["CORE","DAILY","CONVERSATION"],"description":"Memory category (default: CORE)"}},"required":["key","content"]}""",
+                this::memoryStore);
+        toolRegistry.registerAgentTool("memory_recall",
+                "Search memory for relevant information. Returns ranked results matching the query.",
+                """
+                {"type":"object","properties":{"query":{"type":"string","description":"Search query"},"limit":{"type":"integer","description":"Max results (default: 5)"}},"required":["query"]}""",
+                this::memoryRecall);
+        toolRegistry.registerAgentTool("memory_forget",
+                "Remove a memory entry by its key.",
+                """
+                {"type":"object","properties":{"key":{"type":"string","description":"The memory key to forget"}},"required":["key"]}""",
+                this::memoryForget);
+        toolRegistry.registerAgentTool("memory_list",
+                "List all memories in a category.",
+                """
+                {"type":"object","properties":{"category":{"type":"string","enum":["CORE","DAILY","CONVERSATION"],"description":"Category to list (default: CORE)"}},"required":[]}""",
+                this::memoryList);
         log.info("Registered 4 memory tools");
     }
 

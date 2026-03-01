@@ -109,3 +109,4 @@ logging:
   level:
     io.agentrunr: DEBUG
     org.springframework.ai: INFO
+    

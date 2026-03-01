@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.ToolCallback;
+import org.springframework.ai.tool.definition.ToolDefinition;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -29,6 +30,7 @@ public class ToolRegistry {
     private final Map<String, ToolCallback> toolCallbacks = new HashMap<>();
     private final Map<String, ToolCallback> functionCallbacks = new HashMap<>();
     private final Map<String, AgentTool> agentTools = new HashMap<>();
+    private final Map<String, ToolCallback> agentToolCallbacks = new HashMap<>();
     private final ObjectMapper objectMapper;
 
     public ToolRegistry(ObjectMapper objectMapper) {
@@ -53,9 +55,28 @@ public class ToolRegistry {
 
     /**
      * Registers a custom agent tool (supports handoffs and context variable updates).
+     * The tool will NOT be visible to the LLM unless registered with a description via
+     * {@link #registerAgentTool(String, String, String, AgentTool)}.
      */
     public void registerAgentTool(String name, AgentTool tool) {
         agentTools.put(name, tool);
+        log.debug("Registered agent tool: {}", name);
+    }
+
+    /**
+     * Registers a custom agent tool with description and JSON schema, making it
+     * visible to the LLM as a callable function.
+     *
+     * @param name        tool name
+     * @param description human-readable description for the LLM
+     * @param inputSchema JSON Schema string for the tool's parameters
+     * @param tool        the tool implementation
+     */
+    public void registerAgentTool(String name, String description, String inputSchema, AgentTool tool) {
+        agentTools.put(name, tool);
+        // Create a ToolCallback wrapper so the LLM can discover and call this tool
+        ToolCallback callback = new AgentToolCallback(name, description, inputSchema, tool, this);
+        agentToolCallbacks.put(name, callback);
         log.debug("Registered agent tool: {}", name);
     }
 
@@ -66,10 +87,9 @@ public class ToolRegistry {
     public List<ToolCallback> getToolCallbacks(List<String> toolNames) {
         List<ToolCallback> callbacks = new ArrayList<>();
         for (String name : toolNames) {
-            ToolCallback cb = toolCallbacks.get(name);
-            if (cb == null) {
-                cb = functionCallbacks.get(name);
-            }
+            ToolCallback cb = agentToolCallbacks.get(name);
+            if (cb == null) cb = toolCallbacks.get(name);
+            if (cb == null) cb = functionCallbacks.get(name);
             if (cb != null) {
                 callbacks.add(cb);
             } else if (!agentTools.containsKey(name)) {
@@ -80,11 +100,12 @@ public class ToolRegistry {
     }
 
     /**
-     * Returns all registered tool callbacks (@Tool + MCP).
+     * Returns all registered tool callbacks (agent tools + @Tool + MCP).
      * Used when an agent has no explicit tool list, meaning "use everything available."
      */
     public List<ToolCallback> getAllToolCallbacks() {
-        List<ToolCallback> all = new ArrayList<>(toolCallbacks.values());
+        List<ToolCallback> all = new ArrayList<>(agentToolCallbacks.values());
+        all.addAll(toolCallbacks.values());
         all.addAll(functionCallbacks.values());
         return all;
     }
@@ -178,5 +199,46 @@ public class ToolRegistry {
          * @return the tool result (may include handoff or context updates)
          */
         AgentResult execute(Map<String, Object> arguments, AgentContext context);
+    }
+
+    /**
+     * Wraps an AgentTool as a Spring AI ToolCallback so the LLM can discover and invoke it.
+     */
+    static class AgentToolCallback implements ToolCallback {
+
+        private final String name;
+        private final String description;
+        private final String inputSchema;
+        private final AgentTool tool;
+        private final ToolRegistry registry;
+
+        AgentToolCallback(String name, String description, String inputSchema, AgentTool tool, ToolRegistry registry) {
+            this.name = name;
+            this.description = description;
+            this.inputSchema = inputSchema;
+            this.tool = tool;
+            this.registry = registry;
+        }
+
+        @Override
+        public ToolDefinition getToolDefinition() {
+            return ToolDefinition.builder()
+                    .name(name)
+                    .description(description)
+                    .inputSchema(inputSchema)
+                    .build();
+        }
+
+        @Override
+        public String call(String toolInput) {
+            try {
+                Map<String, Object> args = registry.parseArguments(toolInput);
+                AgentContext ctx = new AgentContext();
+                AgentResult result = tool.execute(args, ctx);
+                return result.value();
+            } catch (Exception e) {
+                return "Error: " + e.getMessage();
+            }
+        }
     }
 }

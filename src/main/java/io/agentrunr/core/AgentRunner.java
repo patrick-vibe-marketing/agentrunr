@@ -9,6 +9,7 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.prompt.ChatOptions;
 import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.model.tool.ToolCallingChatOptions;
 import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
@@ -101,23 +102,32 @@ public class AgentRunner {
             String systemInstructions = enrichInstructions(activeAgent.resolveInstructions(context.toMap()), activeAgent, latestUserMessage);
             List<Message> springMessages = toSpringMessages(systemInstructions, history);
 
-            // Configure tool calling options
+            // Resolve tools: explicit list if specified, otherwise all registered tools
+            List<String> tools = activeAgent.toolNames();
+            var toolCallbackList = (tools != null && !tools.isEmpty())
+                    ? toolRegistry.getToolCallbacks(tools)
+                    : toolRegistry.getAllToolCallbacks();
+            if (!toolCallbackList.isEmpty()) {
+                log.debug("Passing {} tool callbacks to LLM: {}", toolCallbackList.size(),
+                        toolCallbackList.stream().map(tc -> tc.getToolDefinition().name()).toList());
+            }
+
+            // Build chat options with tool callbacks embedded
+            ChatOptions chatOptions = ToolCallingChatOptions.builder()
+                    .model(resolved.modelName())
+                    .maxTokens(4096)
+                    .toolCallbacks(toolCallbackList)
+                    .internalToolExecutionEnabled(true)
+                    .build();
+
+            // Configure and call LLM
             ChatClient.ChatClientRequestSpec requestSpec = ChatClient.builder(resolved.chatModel())
                     .build()
                     .prompt()
                     .messages(springMessages)
-                    .options(ChatOptions.builder().model(resolved.modelName()).maxTokens(4096).build());
+                    .options(chatOptions);
 
-            // Add tools: explicit list if specified, otherwise all registered tools
-            List<String> tools = activeAgent.toolNames();
-            var toolCallbacks = (tools != null && !tools.isEmpty())
-                    ? toolRegistry.getToolCallbacks(tools)
-                    : toolRegistry.getAllToolCallbacks();
-            if (!toolCallbacks.isEmpty()) {
-                requestSpec = requestSpec.toolCallbacks(toolCallbacks.toArray(new org.springframework.ai.tool.ToolCallback[0]));
-            }
-
-            // Call the LLM
+            // Call the LLM — Spring AI handles tool calls internally when internalToolExecutionEnabled=true
             ChatResponse response = requestSpec.call().chatResponse();
             String assistantContent = response.getResult().getOutput().getText();
 
@@ -211,19 +221,23 @@ public class AgentRunner {
                     String systemInstructions = enrichInstructions(activeAgent.resolveInstructions(context.toMap()), activeAgent, latestUserMessage);
                     List<Message> springMessages = toSpringMessages(systemInstructions, history);
 
+                    List<String> streamTools = activeAgent.toolNames();
+                    var streamToolCallbackList = (streamTools != null && !streamTools.isEmpty())
+                            ? toolRegistry.getToolCallbacks(streamTools)
+                            : toolRegistry.getAllToolCallbacks();
+
+                    ChatOptions streamChatOptions = ToolCallingChatOptions.builder()
+                            .model(resolved.modelName())
+                            .maxTokens(4096)
+                            .toolCallbacks(streamToolCallbackList)
+                            .internalToolExecutionEnabled(true)
+                            .build();
+
                     ChatClient.ChatClientRequestSpec requestSpec = ChatClient.builder(resolved.chatModel())
                             .build()
                             .prompt()
                             .messages(springMessages)
-                            .options(ChatOptions.builder().model(resolved.modelName()).maxTokens(4096).build());
-
-                    List<String> tools = activeAgent.toolNames();
-                    var toolCallbacks = (tools != null && !tools.isEmpty())
-                            ? toolRegistry.getToolCallbacks(tools)
-                            : toolRegistry.getAllToolCallbacks();
-                    if (!toolCallbacks.isEmpty()) {
-                        requestSpec = requestSpec.toolCallbacks(toolCallbacks.toArray(new org.springframework.ai.tool.ToolCallback[0]));
-                    }
+                            .options(streamChatOptions);
 
                     // Try streaming
                     try {

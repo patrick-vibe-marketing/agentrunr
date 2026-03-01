@@ -1,0 +1,1 @@
+Fetch the current temperature in Antwerp and append the timestamp and temperature to antwerp_temperature.log. Use a reliable source for current weather data.

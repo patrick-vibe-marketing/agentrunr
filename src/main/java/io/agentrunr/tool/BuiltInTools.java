@@ -52,12 +52,36 @@ public class BuiltInTools {
 
     @PostConstruct
     public void registerTools() {
-        toolRegistry.registerAgentTool("shell_exec", this::shellExec);
-        toolRegistry.registerAgentTool("file_read", this::fileRead);
-        toolRegistry.registerAgentTool("file_write", this::fileWrite);
-        toolRegistry.registerAgentTool("file_list", this::fileList);
-        toolRegistry.registerAgentTool("web_search", this::webSearch);
-        toolRegistry.registerAgentTool("web_fetch", this::webFetch);
+        toolRegistry.registerAgentTool("shell_exec",
+                "Execute a shell command and return stdout/stderr. Use for system tasks, checking status, running scripts.",
+                """
+                {"type":"object","properties":{"command":{"type":"string","description":"Shell command to execute"},"timeout_seconds":{"type":"integer","description":"Timeout in seconds (default: 30)"}},"required":["command"]}""",
+                this::shellExec);
+        toolRegistry.registerAgentTool("file_read",
+                "Read the contents of a file.",
+                """
+                {"type":"object","properties":{"path":{"type":"string","description":"File path to read"}},"required":["path"]}""",
+                this::fileRead);
+        toolRegistry.registerAgentTool("file_write",
+                "Write content to a file. Creates parent directories if needed.",
+                """
+                {"type":"object","properties":{"path":{"type":"string","description":"File path to write"},"content":{"type":"string","description":"Content to write"}},"required":["path","content"]}""",
+                this::fileWrite);
+        toolRegistry.registerAgentTool("file_list",
+                "List files and directories at a given path.",
+                """
+                {"type":"object","properties":{"path":{"type":"string","description":"Directory path to list (default: workspace root)"}},"required":[]}""",
+                this::fileList);
+        toolRegistry.registerAgentTool("web_search",
+                "Search the web using Brave Search API. Returns titles, URLs, and snippets.",
+                """
+                {"type":"object","properties":{"query":{"type":"string","description":"Search query"}},"required":["query"]}""",
+                this::webSearch);
+        toolRegistry.registerAgentTool("web_fetch",
+                "Fetch and extract readable content from a URL.",
+                """
+                {"type":"object","properties":{"url":{"type":"string","description":"URL to fetch"}},"required":["url"]}""",
+                this::webFetch);
         log.info("Registered 6 built-in tools (workspace: {}, restricted: {})", workspaceDir, restrictToWorkspace);
     }
 
