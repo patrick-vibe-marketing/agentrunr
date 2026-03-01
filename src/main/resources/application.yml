@@ -26,19 +26,28 @@ spring:
         options:
           model: claude-sonnet-4-20250514
 
-# MCP (Model Context Protocol)
-# We wire MCP clients programmatically to support custom auth headers.
-# Configure via env vars:
-# - PERSONAL_CALENDAR_MCP_URL
-# - PERSONAL_CALENDAR_MCP_PASSWORD
-mcp:
-  personal-calendar:
-    enabled: ${PERSONAL_CALENDAR_MCP_ENABLED:false}
-    url: ${PERSONAL_CALENDAR_MCP_URL:}
-    password: ${PERSONAL_CALENDAR_MCP_PASSWORD:}
-
 # Agent configuration
 agent:
+  # MCP (Model Context Protocol) servers
+  # Each server connects to an external tool provider (calendar, CRM, filesystem, etc.)
+  # Supports SSE (HTTP) and stdio (subprocess) transports.
+  mcp:
+    servers:
+      - name: personal-calendar
+        url: ${PERSONAL_CALENDAR_MCP_URL:}
+        password: ${PERSONAL_CALENDAR_MCP_PASSWORD:}
+        enabled: ${PERSONAL_CALENDAR_MCP_ENABLED:false}
+      - name: hubspot
+        url: ${HUBSPOT_MCP_URL:}
+        headers:
+          Authorization: "Bearer ${HUBSPOT_MCP_TOKEN:}"
+        enabled: ${HUBSPOT_MCP_ENABLED:false}
+      # Stdio transport example:
+      # - name: filesystem
+      #   transport: stdio
+      #   command: npx
+      #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+      #   enabled: true
   name: Assistant
   model: gpt-4.1
   instructions: >

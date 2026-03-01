@@ -1,7 +1,7 @@
 package io.agentrunr.channel;
 
 import io.agentrunr.config.ClaudeCodeOAuthProvider;
-import io.agentrunr.config.McpServerManager;
+import io.agentrunr.config.McpClientManager;
 import io.agentrunr.config.ModelRouter;
 import io.agentrunr.memory.FileMemoryStore;
 import io.agentrunr.memory.Memory;
@@ -29,21 +29,21 @@ public class AdminController {
     private final Memory memory;
     private final ClaudeCodeOAuthProvider claudeCodeOAuthProvider;
     private final CredentialStore credentialStore;
-    private final McpServerManager mcpServerManager;
+    private final McpClientManager mcpClientManager;
 
     public AdminController(
             ModelRouter modelRouter,
             FileMemoryStore memoryStore,
             Memory memory,
             CredentialStore credentialStore,
-            McpServerManager mcpServerManager,
+            McpClientManager mcpClientManager,
             @Autowired(required = false) ClaudeCodeOAuthProvider claudeCodeOAuthProvider
     ) {
         this.modelRouter = modelRouter;
         this.memoryStore = memoryStore;
         this.memory = memory;
         this.credentialStore = credentialStore;
-        this.mcpServerManager = mcpServerManager;
+        this.mcpClientManager = mcpClientManager;
         this.claudeCodeOAuthProvider = claudeCodeOAuthProvider;
     }
 
@@ -199,8 +199,8 @@ public class AdminController {
      * Returns status of all configured MCP servers.
      */
     @GetMapping("/mcp/servers")
-    public ResponseEntity<List<McpServerManager.McpServerStatus>> getMcpServers() {
-        return ResponseEntity.ok(mcpServerManager.getStatuses());
+    public ResponseEntity<List<McpClientManager.McpServerStatus>> getMcpServers() {
+        return ResponseEntity.ok(mcpClientManager.getStatuses());
     }
 
     /**
@@ -214,7 +214,7 @@ public class AdminController {
             if (name == null || name.isBlank() || url == null || url.isBlank()) {
                 return ResponseEntity.badRequest().body(Map.of("success", false, "error", "Name and URL are required"));
             }
-            mcpServerManager.saveDynamicServer(
+            mcpClientManager.saveDynamicServer(
                     name.trim(), url.trim(),
                     body.get("authHeader"), body.get("authValue"));
             return ResponseEntity.ok(Map.of("success", true));
@@ -229,7 +229,7 @@ public class AdminController {
     @DeleteMapping("/mcp/servers/{name}")
     public ResponseEntity<Map<String, Object>> removeMcpServer(@PathVariable String name) {
         try {
-            mcpServerManager.removeDynamicServer(name);
+            mcpClientManager.removeDynamicServer(name);
             return ResponseEntity.ok(Map.of("success", true));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("success", false, "error", e.getMessage()));

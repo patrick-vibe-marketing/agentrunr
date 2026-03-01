@@ -24,7 +24,7 @@ AgentRunr is a Java-native AI agent runtime — a port of OpenAI Swarm's agent o
 export JAVA_HOME=/usr/local/Cellar/openjdk@21/21.0.10/libexec/openjdk.jdk/Contents/Home
 export PATH=$JAVA_HOME/bin:$PATH
 
-# Build + test (120 tests)
+# Build + test (251 tests)
 mvn clean verify
 
 # Run (port 8090 by default)
@@ -48,8 +48,9 @@ io.agentrunr
 │   └── ToolRegistry.java            # Central tool registration
 ├── config/
 │   ├── ModelRouter.java             # Routes to OpenAI/Ollama/Anthropic per request
+│   ├── McpProperties.java           # Config binding for agent.mcp.servers list
+│   ├── McpClientManager.java        # MCP lifecycle: connect, health, tool registration
 │   ├── McpConfig.java               # Auto-discovers MCP ToolCallbackProviders
-│   ├── PersonalCalendarMcpConfig.java # Programmatic MCP client (n8n, custom headers)
 │   ├── ClaudeCodeOAuthProvider.java # (DO NOT USE — Anthropic terms prohibit it)
 │   └── ClaudeCodeAnthropicConfig.java # (DO NOT USE — same reason)
 ├── setup/
@@ -90,7 +91,7 @@ io.agentrunr
 2. **ModelRouter with @Nullable injection** — Each provider bean is optional; router selects per-request
 3. **Channel interface is NOT sealed** — Designed for extensibility (add Discord, Slack, etc.)
 4. **CredentialStore over env vars** — Interactive auth setup like Claude Code; AES-256-GCM encrypted on disk; takes priority over env vars
-5. **Programmatic MCP clients** — Spring AI auto-config SSE only supports `url` + `sseEndpoint`, not custom headers. Use manual `HttpClientSseClientTransport` + `McpClient.sync()` for servers needing auth headers
+5. **Generic MCP server config** — `agent.mcp.servers` list in application.yml supports SSE + stdio transports, custom headers, password shorthand. `McpClientManager` handles lifecycle, health, and ToolRegistry integration
 6. **Heartbeat + Cron as killer feature** — JobRunr provides persistent distributed scheduling, unlike in-memory cron
 
 ## Spring AI 1.0.0 GA API Notes
@@ -105,13 +106,50 @@ These changed from M6 → GA. Don't use old patterns:
   - `spring-ai-anthropic-spring-boot-starter` → `spring-ai-starter-model-anthropic`
   - `spring-ai-mcp-client-spring-boot-starter` → `spring-ai-starter-mcp-client`
 
+## MCP Architecture
+
+MCP servers are configured in `application.yml` under `agent.mcp.servers`:
+
+```yaml
+agent:
+  mcp:
+    servers:
+      - name: personal-calendar
+        url: ${PERSONAL_CALENDAR_MCP_URL:}
+        password: ${PERSONAL_CALENDAR_MCP_PASSWORD:}  # shorthand for "Password" header
+        enabled: ${PERSONAL_CALENDAR_MCP_ENABLED:false}
+      - name: hubspot
+        url: ${HUBSPOT_MCP_URL:}
+        headers:
+          Authorization: "Bearer ${HUBSPOT_MCP_TOKEN:}"
+        enabled: ${HUBSPOT_MCP_ENABLED:false}
+      - name: filesystem
+        transport: stdio
+        command: npx
+        args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
+        enabled: true
+```
+
+**Key classes:**
+- `McpProperties` — `@ConfigurationProperties` record binding the config list
+- `McpClientManager` — Manages lifecycle (connect/health/reconnect/shutdown), registers tools into `ToolRegistry`
+- `McpConfig` — Auto-discovers any Spring AI `ToolCallbackProvider` beans
+
+**How tools flow:**
+1. `McpClientManager.init()` connects each enabled server via SSE or stdio transport
+2. Tools from each server are registered as `functionCallbacks` in `ToolRegistry`
+3. `AgentRunner` resolves tools via `ToolRegistry.getToolCallbacks()`
+4. Tool execution: `ToolCallback.call(jsonArgs)` → MCP SDK → remote server
+5. Priority: AgentTools > Spring @Tool > MCP function callbacks
+
+**Dynamic servers** can also be added at runtime via `POST /api/mcp/servers` (stored in CredentialStore).
+
 ## MCP Integration Gotchas
 
-If adding new MCP servers with custom auth:
-
-1. **URI resolution:** `URI.resolve("/sse")` with leading slash resets to root. Use `URI.resolve("sse")` (relative) with baseUri ending in `/`
-2. **SDK 0.10.0 Builder bug:** `HttpClientSseClientTransport.Builder.customizeRequest()` consumers aren't wired in `build()`. Use the 4-arg public constructor directly: `new HttpClientSseClientTransport(objectMapper, httpClient, requestBuilder, sseUri)`
+1. **URI resolution:** `URI.resolve("/sse")` with leading slash resets to root. `McpClientManager.parseSseUri()` handles this — URLs ending with `/sse` split into base + relative endpoint
+2. **SDK 0.10.0 constructors deprecated:** All public constructors of `HttpClientSseClientTransport` are deprecated. Use `HttpClientSseClientTransport.builder(baseUri)` with `.requestBuilder()` for custom headers
 3. **Credentials via env vars only** — Never hardcode in application.yml
+4. **Stdio transport** uses `ServerParameters.builder(command).args(...)` + `StdioClientTransport`
 
 ## Configuration
 
@@ -121,14 +159,15 @@ All secrets via env vars (see `application.yml`):
 - `OLLAMA_BASE_URL` + `OLLAMA_ENABLED=true` — Ollama
 - `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ENABLED=true` — Telegram bot
 - `AGENT_API_KEY` — API authentication
-- `PERSONAL_CALENDAR_MCP_*` — MCP calendar integration
+- `PERSONAL_CALENDAR_MCP_URL/PASSWORD/ENABLED` — MCP calendar
+- `HUBSPOT_MCP_URL/TOKEN/ENABLED` — MCP HubSpot
 - `BRAVE_API_KEY` — Web search tool
 
 Or use the interactive setup: run with `--setup` flag or visit `/setup` in browser.
 
 ## Tests
 
-120 tests across 19 test classes. All must pass before committing:
+251 tests across 29 test classes. All must pass before committing:
 ```bash
 mvn clean verify
 ```
