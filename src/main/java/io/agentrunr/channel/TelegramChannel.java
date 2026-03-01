@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
  * </pre>
  */
 @Component
-public class TelegramChannel {
+public class TelegramChannel implements Channel {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramChannel.class);
     private static final String API_BASE = "https://api.telegram.org/bot";
@@ -45,21 +45,25 @@ public class TelegramChannel {
     private final SQLiteMemoryStore sqliteMemory;
     private final ObjectMapper objectMapper;
     private final CredentialStore credentialStore;
+    private final ChannelRegistry channelRegistry;
     private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
 
     private String botToken;
     private String allowedUsers;
     private long lastUpdateId = 0;
+    private volatile long lastChatId = 0;
 
     public TelegramChannel(AgentRunner agentRunner, AgentConfigurer agentConfigurer,
                            FileMemoryStore memoryStore, SQLiteMemoryStore sqliteMemory,
-                           ObjectMapper objectMapper, CredentialStore credentialStore) {
+                           ObjectMapper objectMapper, CredentialStore credentialStore,
+                           ChannelRegistry channelRegistry) {
         this.agentRunner = agentRunner;
         this.agentConfigurer = agentConfigurer;
         this.memoryStore = memoryStore;
         this.sqliteMemory = sqliteMemory;
         this.objectMapper = objectMapper;
         this.credentialStore = credentialStore;
+        this.channelRegistry = channelRegistry;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -74,6 +78,7 @@ public class TelegramChannel {
         }
 
         log.info("Telegram channel starting with long polling...");
+        channelRegistry.register(this);
         executor.scheduleWithFixedDelay(this::pollUpdates, 0, 1, TimeUnit.SECONDS);
     }
 
@@ -126,6 +131,9 @@ public class TelegramChannel {
             }
         }
 
+        this.lastChatId = chatId;
+        channelRegistry.markActive(getName());
+
         log.info("Telegram message from {} ({}): {}", userName, userId, text);
 
         // Store in memory
@@ -157,6 +165,20 @@ public class TelegramChannel {
             log.error("Error processing Telegram message: {}", e.getMessage(), e);
             sendMessage(chatId, "❌ Error: " + e.getMessage());
         }
+    }
+
+    @Override
+    public void sendMessage(String message) {
+        if (lastChatId == 0) {
+            log.warn("No Telegram chat ID available — no messages received yet");
+            return;
+        }
+        sendMessage(lastChatId, message);
+    }
+
+    @Override
+    public String getName() {
+        return "telegram";
     }
 
     /**

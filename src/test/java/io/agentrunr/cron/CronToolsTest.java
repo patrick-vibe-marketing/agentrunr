@@ -242,9 +242,9 @@ class CronToolsTest {
         assertTrue(Files.exists(taskFile), "Task file should exist: " + taskFile);
         assertEquals(expectedContent, Files.readString(taskFile));
 
-        // Verify JobRunr was called (use specific type to avoid ambiguity)
+        // Verify JobRunr was called with IoC lambda (resolves bean from Spring context)
         verify(jobScheduler, atLeastOnce()).scheduleRecurrently(
-                eq("agent-cron-" + expectedId), anyString(), any(org.jobrunr.jobs.lambdas.JobLambda.class));
+                eq("agent-cron-" + expectedId), anyString(), any(org.jobrunr.jobs.lambdas.IocJobLambda.class));
     }
 
     private RecurringJob makeRecurringJob(String id, String taskName, String cron) {

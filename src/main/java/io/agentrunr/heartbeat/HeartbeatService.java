@@ -48,9 +48,9 @@ public class HeartbeatService {
         log.info("Registering heartbeat job: every {} minutes, file: {}", intervalMinutes, heartbeatFile);
         String cronExpression = buildCronExpression(intervalMinutes);
 
-        jobScheduler.scheduleRecurrently(HEARTBEAT_JOB_ID,
+        jobScheduler.<HeartbeatJob>scheduleRecurrently(HEARTBEAT_JOB_ID,
                 cronExpression,
-                () -> heartbeatJob.execute(heartbeatFile));
+                x -> x.execute(heartbeatFile));
 
         log.info("Heartbeat job registered with cron: {}", cronExpression);
     }

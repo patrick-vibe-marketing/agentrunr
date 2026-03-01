@@ -52,7 +52,7 @@ public class CronService {
         writeTaskFile(taskName, message);
 
         String jobId = JOB_PREFIX + taskName;
-        jobScheduler.scheduleRecurrently(jobId, cronExpression, () -> cronJob.executeTask(taskName));
+        jobScheduler.<CronJob>scheduleRecurrently(jobId, cronExpression, x -> x.executeTask(taskName));
 
         log.info("Added cron task '{}' ({}): {}", taskName, cronExpression, message);
         return ScheduledTask.cron(taskName, name, message, cronExpression);
@@ -69,7 +69,7 @@ public class CronService {
         writeTaskFile(taskName, message);
 
         String jobId = JOB_PREFIX + taskName;
-        jobScheduler.scheduleRecurrently(jobId, cron, () -> cronJob.executeTask(taskName));
+        jobScheduler.<CronJob>scheduleRecurrently(jobId, cron, x -> x.executeTask(taskName));
 
         log.info("Added interval task '{}' (every {}s → cron '{}'): {}", taskName, intervalSeconds, cron, message);
         return ScheduledTask.interval(taskName, name, message, intervalSeconds);
@@ -84,7 +84,7 @@ public class CronService {
         writeTaskFile(taskName, message);
 
         String jobId = JOB_PREFIX + taskName;
-        jobScheduler.schedule(executeAt, () -> cronJob.executeTask(taskName));
+        jobScheduler.<CronJob>schedule(executeAt, x -> x.executeTask(taskName));
 
         log.info("Added one-shot task '{}' at {}: {}", taskName, executeAt, message);
         return ScheduledTask.oneShot(taskName, name, message, executeAt);
