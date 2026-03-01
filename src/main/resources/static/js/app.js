@@ -659,6 +659,47 @@ if (chatHistory.length > 0) {
     }
 }
 
+// Restart
+document.getElementById('restartBtn').addEventListener('click', async () => {
+    if (!confirm('Are you sure you want to restart AgentRunr?')) return;
+
+    const btn = document.getElementById('restartBtn');
+    btn.disabled = true;
+    btn.textContent = 'Restarting...';
+
+    try {
+        await fetch(`${API_BASE}/restart`, { method: 'POST' });
+        showToast('Restarting AgentRunr...', 'success');
+
+        // Poll health endpoint until the app comes back
+        let attempts = 0;
+        const maxAttempts = 20;
+        const poll = setInterval(async () => {
+            attempts++;
+            try {
+                const resp = await fetch(`${API_BASE}/health`);
+                if (resp.ok) {
+                    clearInterval(poll);
+                    showToast('AgentRunr is back online', 'success');
+                    location.reload();
+                }
+            } catch (e) {
+                // Still restarting
+            }
+            if (attempts >= maxAttempts) {
+                clearInterval(poll);
+                btn.disabled = false;
+                btn.textContent = '\u27F3 Restart AgentRunr';
+                showToast('Restart may have failed. Check if the process manager restarted the app.', 'error');
+            }
+        }, 2000);
+    } catch (error) {
+        btn.disabled = false;
+        btn.textContent = '\u27F3 Restart AgentRunr';
+        showToast('Failed to restart: ' + error.message, 'error');
+    }
+});
+
 // Init
 fetchSettings();
 checkHealth();

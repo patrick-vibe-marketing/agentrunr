@@ -1,5 +1,6 @@
 package io.agentrunr.tool;
 
+import io.agentrunr.channel.AdminController;
 import io.agentrunr.core.AgentContext;
 import io.agentrunr.core.AgentResult;
 import io.agentrunr.core.ToolRegistry;
@@ -85,7 +86,12 @@ public class BuiltInTools {
                 """
                 {"type":"object","properties":{"url":{"type":"string","description":"URL to fetch"}},"required":["url"]}""",
                 this::webFetch);
-        log.info("Registered 6 built-in tools (workspace: {}, restricted: {})", workspaceDir, restrictToWorkspace);
+        toolRegistry.registerAgentTool("restart_application",
+                "Restart the AgentRunr application. Use when configuration changes require a restart, such as new MCP servers or updated settings.",
+                """
+                {"type":"object","properties":{},"required":[]}""",
+                this::restartApplication);
+        log.info("Registered 7 built-in tools (workspace: {}, restricted: {})", workspaceDir, restrictToWorkspace);
     }
 
     private AgentResult shellExec(Map<String, Object> args, AgentContext ctx) {
@@ -262,6 +268,12 @@ public class BuiltInTools {
         } catch (Exception e) {
             return AgentResult.of("Error fetching URL: " + e.getMessage());
         }
+    }
+
+    private AgentResult restartApplication(Map<String, Object> args, AgentContext ctx) {
+        log.info("Application restart requested via agent tool");
+        AdminController.scheduleShutdown();
+        return AgentResult.of("Restarting AgentRunr... The application will be back shortly.");
     }
 
     private AgentResult searchViaBrave(String query, String apiKey) {

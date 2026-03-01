@@ -11,6 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.IOException;
 
 import java.util.HashMap;
@@ -23,6 +26,8 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api")
 public class AdminController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     private final ModelRouter modelRouter;
     private final FileMemoryStore memoryStore;
@@ -303,6 +308,32 @@ public class AdminController {
                     "error", e.getMessage()
             ));
         }
+    }
+
+    /**
+     * Triggers a graceful application restart.
+     * Returns 200 immediately, then exits after a short delay.
+     * Requires a process manager (systemd, Docker, wrapper script) to restart the process.
+     */
+    @PostMapping("/restart")
+    public ResponseEntity<Map<String, Object>> restart() {
+        log.info("Application restart requested via API");
+        scheduleShutdown();
+        return ResponseEntity.ok(Map.of("success", true, "message", "Restarting AgentRunr..."));
+    }
+
+    public static void scheduleShutdown() {
+        Thread shutdownThread = new Thread(() -> {
+            try {
+                Thread.sleep(1500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            log.info("Shutting down for restart...");
+            System.exit(0);
+        }, "agentrunr-restart");
+        shutdownThread.setDaemon(true);
+        shutdownThread.start();
     }
 
     private String maskToken(String token) {
