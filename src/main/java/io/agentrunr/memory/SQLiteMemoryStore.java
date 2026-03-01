@@ -2,6 +2,7 @@ package io.agentrunr.memory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +34,7 @@ public class SQLiteMemoryStore implements Memory {
     private final String dbPath;
     private Connection connection;
 
+    @Autowired
     public SQLiteMemoryStore(@Value("${memory.path:./data/memory}") String memoryPath) {
         Path dir = Path.of(memoryPath);
         try {

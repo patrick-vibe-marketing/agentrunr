@@ -62,7 +62,7 @@ agent:
   heartbeat:
     enabled: ${HEARTBEAT_ENABLED:true}
     interval-minutes: ${HEARTBEAT_INTERVAL:30}
-    file: ${HEARTBEAT_FILE:./HEARTBEAT.md}
+    file: ${HEARTBEAT_FILE:./workspace/HEARTBEAT.md}
 
   # Telegram channel
   telegram:
@@ -86,7 +86,7 @@ jobrunr:
     enabled: true
     port: 8000
   database:
-    url: jdbc:sqlite:./data/jobrunr.db
+    url: jdbc:sqlite:./data/jobrunr.db?journal_mode=WAL&busy_timeout=5000
   misc:
     allow-anonymous-data-usage: false
 

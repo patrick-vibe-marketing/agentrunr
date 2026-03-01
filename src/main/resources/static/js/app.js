@@ -160,10 +160,7 @@ async function sendMessageStreaming() {
                     if (line.startsWith('event:')) {
                         eventType = line.substring(6).trim();
                     } else if (line.startsWith('data:')) {
-                        // Preserve whitespace — only strip the single space after "data:" per SSE spec
-                        let d = line.substring(5);
-                        if (d.startsWith(' ')) d = d.substring(1);
-                        dataLines.push(d);
+                        dataLines.push(line.substring(5));
                     }
                 }
 
