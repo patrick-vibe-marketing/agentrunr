@@ -6,6 +6,8 @@ spring:
       - ${EXCLUDE_OLLAMA:org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration}
       - ${EXCLUDE_ANTHROPIC:org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration}
       - ${EXCLUDE_MISTRAL:org.springframework.ai.model.mistralai.autoconfigure.MistralAiChatAutoConfiguration}
+      - ${EXCLUDE_MISTRAL_EMBEDDING:org.springframework.ai.model.mistralai.autoconfigure.MistralAiEmbeddingAutoConfiguration}
+      - ${EXCLUDE_MISTRAL_MODERATION:org.springframework.ai.model.mistralai.autoconfigure.MistralAiModerationAutoConfiguration}
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:sk-placeholder}
