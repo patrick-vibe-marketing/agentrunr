@@ -1,5 +1,10 @@
 package io.agentrunr.cron;
 
+import org.jobrunr.jobs.RecurringJob;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Instant;
 
 /**
@@ -41,6 +46,38 @@ public record ScheduledTask(
      */
     public static ScheduledTask oneShot(String id, String name, String message, Instant executeAt) {
         return new ScheduledTask(id, name, message, null, null, executeAt, Instant.now());
+    }
+
+    /**
+     * Creates a ScheduledTask from a JobRunr RecurringJob.
+     * Reads the task prompt from the corresponding .md file in tasksDir.
+     */
+    public static ScheduledTask fromRecurringJob(RecurringJob job, String idPrefix, Path tasksDir) {
+        String id = job.getId();
+        if (id.startsWith(idPrefix)) {
+            id = id.substring(idPrefix.length());
+        }
+
+        // The task name is the first (and only) parameter of executeTask(taskName)
+        Object[] params = job.getJobDetails().getJobParameterValues();
+        String taskName = params.length > 0 ? String.valueOf(params[0]) : id;
+
+        // Read the prompt from the task file
+        String message = "";
+        Path taskFile = tasksDir.resolve(taskName + ".md");
+        if (Files.exists(taskFile)) {
+            try {
+                message = Files.readString(taskFile);
+            } catch (IOException e) {
+                message = "(failed to read task file)";
+            }
+        }
+
+        return new ScheduledTask(
+                id, taskName, message,
+                job.getScheduleExpression(), null, null,
+                job.getCreatedAt()
+        );
     }
 
     /**

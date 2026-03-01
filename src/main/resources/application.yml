@@ -58,6 +58,10 @@ agent:
   # Claude Code OAuth — auto-detected from system keychain / ~/.claude/.credentials.json
   # Run 'claude auth login' to enable. No manual config needed.
 
+  # Scheduled tasks directory
+  tasks:
+    path: ${AGENT_TASKS_PATH:./workspace/tasks}
+
   # Heartbeat — periodic task check
   heartbeat:
     enabled: ${HEARTBEAT_ENABLED:true}

@@ -40,11 +40,16 @@ public class CronTools {
     }
 
     private AgentResult scheduleTask(Map<String, Object> args, io.agentrunr.core.AgentContext ctx) {
-        String name = stringArg(args, "name", "Unnamed Task");
-        String message = stringArg(args, "message", "");
-        String cron = stringArg(args, "cron", null);
-        Integer intervalSeconds = intArg(args, "interval_seconds");
-        String executeAtStr = stringArg(args, "execute_at", null);
+        // Accept common aliases — LLMs guess different parameter names without a schema
+        String name = firstString(args, "name", "description", "task_name", "title");
+        if (name == null || name.isBlank()) name = "Unnamed Task";
+
+        String message = firstString(args, "message", "prompt", "task", "content", "instruction", "description");
+        if (message == null) message = "";
+
+        String cron = firstString(args, "cron", "cron_expression", "schedule");
+        Integer intervalSeconds = firstInt(args, "interval_seconds", "interval", "every_seconds", "frequency_seconds");
+        String executeAtStr = firstString(args, "execute_at", "run_at", "scheduled_time");
 
         if (message.isBlank()) {
             return AgentResult.of("Error: 'message' is required for scheduling a task.");
@@ -85,7 +90,7 @@ public class CronTools {
     }
 
     private AgentResult cancelScheduledTask(Map<String, Object> args, io.agentrunr.core.AgentContext ctx) {
-        String taskId = stringArg(args, "task_id", null);
+        String taskId = firstString(args, "task_id", "id", "job_id", "name");
         if (taskId == null) {
             return AgentResult.of("Error: 'task_id' is required.");
         }
@@ -96,19 +101,31 @@ public class CronTools {
                 : AgentResult.of("Task not found: " + taskId);
     }
 
-    private String stringArg(Map<String, Object> args, String key, String defaultValue) {
-        Object val = args.get(key);
-        return val != null ? val.toString() : defaultValue;
+    /**
+     * Returns the first non-null string value found for any of the given keys.
+     */
+    private String firstString(Map<String, Object> args, String... keys) {
+        for (String key : keys) {
+            Object val = args.get(key);
+            if (val != null) return val.toString();
+        }
+        return null;
     }
 
-    private Integer intArg(Map<String, Object> args, String key) {
-        Object val = args.get(key);
-        if (val == null) return null;
-        if (val instanceof Number n) return n.intValue();
-        try {
-            return Integer.parseInt(val.toString());
-        } catch (NumberFormatException e) {
-            return null;
+    /**
+     * Returns the first non-null integer value found for any of the given keys.
+     */
+    private Integer firstInt(Map<String, Object> args, String... keys) {
+        for (String key : keys) {
+            Object val = args.get(key);
+            if (val == null) continue;
+            if (val instanceof Number n) return n.intValue();
+            try {
+                return Integer.parseInt(val.toString());
+            } catch (NumberFormatException e) {
+                // try next key
+            }
         }
+        return null;
     }
 }
