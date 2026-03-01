@@ -98,7 +98,7 @@ io.agentrunr
 ## Key Architecture Decisions
 
 1. **Spring AI over LangChain4j** — Native Spring integration, built-in @Tool + MCP support
-2. **ModelRouter with @Nullable injection** — Each provider bean is optional; router selects per-request
+2. **ModelRouter with @Nullable injection** — Each provider bean is optional (OpenAI, Anthropic, Mistral, Ollama); router selects per-request
 3. **Channel interface is NOT sealed** — Designed for extensibility (add Discord, Slack, etc.)
 4. **CredentialStore over env vars** — Interactive auth setup like Claude Code; AES-256-GCM encrypted on disk; takes priority over env vars
 5. **Generic MCP server config** — `agent.mcp.servers` list in application.yml supports SSE + stdio transports, custom headers, password shorthand. `McpClientManager` handles lifecycle, health, and ToolRegistry integration
@@ -288,6 +288,7 @@ These changed from M6 → GA. Don't use old patterns:
   - `spring-ai-ollama-spring-boot-starter` → `spring-ai-starter-model-ollama`
   - `spring-ai-anthropic-spring-boot-starter` → `spring-ai-starter-model-anthropic`
   - `spring-ai-mcp-client-spring-boot-starter` → `spring-ai-starter-mcp-client`
+  - `spring-ai-mistralai-spring-boot-starter` → `spring-ai-starter-model-mistral-ai`
 
 ## Configuration
 
@@ -296,6 +297,7 @@ All secrets via env vars (see `application.yml`):
 - `ANTHROPIC_API_KEY` + `ANTHROPIC_ENABLED=true` — Anthropic
 - `OLLAMA_BASE_URL` + `OLLAMA_ENABLED=true` — Ollama
 - `TELEGRAM_BOT_TOKEN` + `TELEGRAM_ENABLED=true` — Telegram bot
+- `MISTRAL_API_KEY` + `MISTRAL_ENABLED=true` — Mistral AI
 - `AGENT_API_KEY` — API authentication
 - `PERSONAL_CALENDAR_MCP_URL/PASSWORD/ENABLED` — MCP calendar
 - `HUBSPOT_MCP_URL/TOKEN/ENABLED` — MCP HubSpot

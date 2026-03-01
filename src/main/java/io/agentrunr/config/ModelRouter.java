@@ -19,6 +19,7 @@ import java.util.Map;
  *   <li>{@code "openai:gpt-4.1-mini"} — explicit OpenAI</li>
  *   <li>{@code "ollama:llama3"} — routes to local Ollama</li>
  *   <li>{@code "anthropic:claude-sonnet-4-20250514"} — routes to Anthropic</li>
+ *   <li>{@code "mistral:mistral-medium-latest"} — routes to Mistral AI</li>
  * </ul>
  *
  * <p>Providers are optional — only configured providers are available.
@@ -36,19 +37,22 @@ public class ModelRouter {
     public ModelRouter(
             @Autowired(required = false) @Qualifier("openAiChatModel") ChatModel openAiChatModel,
             @Autowired(required = false) @Qualifier("ollamaChatModel") ChatModel ollamaChatModel,
-            @Autowired(required = false) @Qualifier("anthropicChatModel") ChatModel anthropicChatModel
+            @Autowired(required = false) @Qualifier("anthropicChatModel") ChatModel anthropicChatModel,
+            @Autowired(required = false) @Qualifier("mistralAiChatModel") ChatModel mistralAiChatModel
     ) {
         if (openAiChatModel != null) providers.put("openai", openAiChatModel);
         if (ollamaChatModel != null) providers.put("ollama", ollamaChatModel);
         if (anthropicChatModel != null) providers.put("anthropic", anthropicChatModel);
+        if (mistralAiChatModel != null) providers.put("mistral", mistralAiChatModel);
 
-        // Pick default: OpenAI > Anthropic > Ollama
+        // Pick default: OpenAI > Anthropic > Mistral > Ollama
         this.defaultModel = openAiChatModel != null ? openAiChatModel
                 : anthropicChatModel != null ? anthropicChatModel
+                : mistralAiChatModel != null ? mistralAiChatModel
                 : ollamaChatModel;
 
         if (this.defaultModel == null) {
-            throw new IllegalStateException("At least one AI provider must be configured (OpenAI, Ollama, or Anthropic)");
+            throw new IllegalStateException("At least one AI provider must be configured (OpenAI, Ollama, Anthropic, or Mistral)");
         }
 
         log.info("ModelRouter initialized with providers: {} (default: {})",
@@ -90,7 +94,10 @@ public class ModelRouter {
         if (lower.startsWith("claude")) {
             return new ResolvedModel(providers.get("anthropic"), modelSpec, "anthropic");
         }
-        if (lower.startsWith("llama") || lower.startsWith("mistral") || lower.startsWith("gemma") || lower.startsWith("qwen") || lower.startsWith("deepseek") || lower.startsWith("phi")) {
+        if (lower.startsWith("mistral") || lower.startsWith("ministral") || lower.startsWith("magistral") || lower.startsWith("codestral") || lower.startsWith("devstral")) {
+            return new ResolvedModel(providers.get("mistral"), modelSpec, "mistral");
+        }
+        if (lower.startsWith("llama") || lower.startsWith("gemma") || lower.startsWith("qwen") || lower.startsWith("deepseek") || lower.startsWith("phi")) {
             return new ResolvedModel(providers.get("ollama"), modelSpec, "ollama");
         }
 

@@ -118,6 +118,15 @@
 
         <div class="setup-field">
             <label>
+                Mistral AI API Key
+                <span class="provider-status" id="mistralStatus"></span>
+            </label>
+            <input type="password" id="mistralKey" placeholder="...">
+            <div class="hint">Get yours at <a href="https://console.mistral.ai/" target="_blank">console.mistral.ai</a></div>
+        </div>
+
+        <div class="setup-field">
+            <label>
                 Brave Search API Key
                 <span class="provider-status" id="braveSearchStatus"></span>
             </label>
@@ -148,6 +157,7 @@
                 const data = await res.json();
                 updateStatus('openaiStatus', data.providers.openai);
                 updateStatus('anthropicStatus', data.providers.anthropic);
+                updateStatus('mistralStatus', data.providers.mistral);
                 updateStatus('braveSearchStatus', data.providers.braveSearch);
                 updateStatus('claudeCodeOauthStatus', data.providers.claudeCodeOauth);
             } catch (e) {
@@ -176,12 +186,14 @@
             const body = {};
             const openai = document.getElementById('openaiKey').value.trim();
             const anthropic = document.getElementById('anthropicKey').value.trim();
+            const mistral = document.getElementById('mistralKey').value.trim();
             const brave = document.getElementById('braveApiKey').value.trim();
             if (openai) body.openai = openai;
             if (anthropic) body.anthropic = anthropic;
+            if (mistral) body.mistral = mistral;
             if (brave) body.braveApiKey = brave;
 
-            if (!openai && !anthropic && !brave) {
+            if (!openai && !anthropic && !mistral && !brave) {
                 msg.textContent = 'Please enter at least one API key.';
                 msg.className = 'setup-message error';
                 btn.disabled = false;
@@ -202,6 +214,9 @@
                     msg.className = 'setup-message success';
                     updateStatus('openaiStatus', data.providers.openai);
                     updateStatus('anthropicStatus', data.providers.anthropic);
+                    if (data.providers.mistral !== undefined) {
+                        updateStatus('mistralStatus', data.providers.mistral);
+                    }
                     if (data.providers.braveSearch !== undefined) {
                         updateStatus('braveSearchStatus', data.providers.braveSearch);
                     }

@@ -5,6 +5,7 @@ spring:
     exclude:
       - ${EXCLUDE_OLLAMA:org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration}
       - ${EXCLUDE_ANTHROPIC:org.springframework.ai.model.anthropic.autoconfigure.AnthropicChatAutoConfiguration}
+      - ${EXCLUDE_MISTRAL:org.springframework.ai.model.mistralai.autoconfigure.MistralAiChatAutoConfiguration}
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:sk-placeholder}
@@ -25,6 +26,12 @@ spring:
       chat:
         options:
           model: claude-sonnet-4-20250514
+    mistralai:
+      api-key: ${MISTRAL_API_KEY:}
+      enabled: ${MISTRAL_ENABLED:false}
+      chat:
+        options:
+          model: mistral-medium-latest
 
 # Agent configuration
 agent:

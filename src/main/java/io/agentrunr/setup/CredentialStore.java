@@ -51,8 +51,8 @@ public class CredentialStore {
      * Returns true if any API keys are configured (either in store or env vars).
      */
     public boolean isConfigured() {
-        return hasKey("openai") || hasKey("anthropic")
-                || hasEnvKey("OPENAI_API_KEY") || hasEnvKey("ANTHROPIC_API_KEY")
+        return hasKey("openai") || hasKey("anthropic") || hasKey("mistral")
+                || hasEnvKey("OPENAI_API_KEY") || hasEnvKey("ANTHROPIC_API_KEY") || hasEnvKey("MISTRAL_API_KEY")
                 || claudeCodeOAuthProvider.getAccessToken().isPresent();
     }
 
@@ -67,6 +67,7 @@ public class CredentialStore {
         return switch (provider) {
             case "openai" -> getEnvOrNull("OPENAI_API_KEY");
             case "anthropic" -> getEnvOrNull("ANTHROPIC_API_KEY");
+            case "mistral" -> getEnvOrNull("MISTRAL_API_KEY");
             case "telegram_token" -> getEnvOrNull("TELEGRAM_BOT_TOKEN");
             case "telegram_allowed_users" -> getEnvOrNull("TELEGRAM_ALLOWED_USERS");
             case "brave_api_key" -> getEnvOrNull("BRAVE_API_KEY");
@@ -116,6 +117,7 @@ public class CredentialStore {
         var status = new java.util.HashMap<String, Boolean>();
         status.put("openai", getApiKey("openai") != null);
         status.put("anthropic", getApiKey("anthropic") != null);
+        status.put("mistral", getApiKey("mistral") != null);
         status.put("claudeCodeOauth", claudeCodeOAuthProvider.getAccessToken().isPresent());
         status.put("telegram", getApiKey("telegram_token") != null);
         status.put("braveSearch", getApiKey("brave_api_key") != null);

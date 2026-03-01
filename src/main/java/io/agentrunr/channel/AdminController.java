@@ -58,6 +58,7 @@ public class AdminController {
         providers.put("openai", checkProvider("openai", "gpt-4.1"));
         providers.put("ollama", checkProvider("ollama", "llama3.2"));
         providers.put("anthropic", checkProvider("anthropic", "claude-sonnet-4-20250514"));
+        providers.put("mistral", checkProvider("mistral", "mistral-medium-latest"));
 
         // Claude Code OAuth status
         if (claudeCodeOAuthProvider != null) {

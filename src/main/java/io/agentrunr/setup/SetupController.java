@@ -45,6 +45,9 @@ public class SetupController {
             if (keys.containsKey("anthropic")) {
                 credentialStore.setApiKey("anthropic", keys.get("anthropic"));
             }
+            if (keys.containsKey("mistral")) {
+                credentialStore.setApiKey("mistral", keys.get("mistral"));
+            }
             if (keys.containsKey("braveApiKey")) {
                 credentialStore.setApiKey("brave_api_key", keys.get("braveApiKey"));
             }
