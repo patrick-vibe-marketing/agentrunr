@@ -46,6 +46,7 @@ document.querySelectorAll('.nav-link[data-view]').forEach(link => {
         if (view === 'settings') {
             loadSettings();
             loadProviderStatus();
+            loadToolSettings();
             loadTelegramSettings();
             loadMcpServers();
             loadSessions();
@@ -339,6 +340,100 @@ function updateProviderCard(id, status) {
         statusEl.textContent = 'Not configured';
     }
 }
+
+// Tool Settings
+async function loadToolSettings() {
+    try {
+        const response = await fetch(`${API_BASE}/settings/tools`);
+        if (response.ok) {
+            const data = await response.json();
+
+            // Web Search status
+            const braveStatus = document.getElementById('braveToolStatus');
+            if (data.webSearch && data.webSearch.configured) {
+                braveStatus.textContent = 'Configured';
+                braveStatus.className = 'tool-status configured';
+            } else {
+                braveStatus.textContent = 'Not configured';
+                braveStatus.className = 'tool-status';
+            }
+
+            // Playwright status
+            const pwToggle = document.getElementById('playwrightToggle');
+            const pwStatus = document.getElementById('playwrightStatus');
+            if (data.browser) {
+                pwToggle.checked = data.browser.enabled;
+                if (data.browser.enabled) {
+                    pwStatus.textContent = 'Connected';
+                    pwStatus.className = 'tool-status configured';
+                } else if (data.browser.configured) {
+                    pwStatus.textContent = 'Disabled';
+                    pwStatus.className = 'tool-status';
+                } else {
+                    pwStatus.textContent = 'Not available';
+                    pwStatus.className = 'tool-status';
+                }
+            }
+        }
+    } catch (error) {
+        // Silently fail
+    }
+}
+
+document.getElementById('saveBraveKeyBtn').addEventListener('click', async () => {
+    const key = document.getElementById('braveApiKeyInput').value.trim();
+    if (!key) {
+        showToast('Enter a Brave API key to save', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/settings/tools`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ braveApiKey: key })
+        });
+
+        if (response.ok) {
+            showToast('Brave API key saved', 'success');
+            document.getElementById('braveApiKeyInput').value = '';
+            loadToolSettings();
+        } else {
+            showToast('Failed to save Brave API key', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to save Brave API key', 'error');
+    }
+});
+
+document.getElementById('playwrightToggle').addEventListener('change', async (e) => {
+    const enable = e.target.checked;
+    const pwStatus = document.getElementById('playwrightStatus');
+    pwStatus.textContent = enable ? 'Connecting...' : 'Disconnecting...';
+    pwStatus.className = 'tool-status';
+
+    try {
+        const response = await fetch(`${API_BASE}/settings/tools`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ browser: enable })
+        });
+
+        if (response.ok) {
+            showToast(enable ? 'Playwright enabled' : 'Playwright disabled', 'success');
+            loadToolSettings();
+            loadMcpServers();
+        } else {
+            showToast('Failed to toggle Playwright', 'error');
+            e.target.checked = !enable;
+            loadToolSettings();
+        }
+    } catch (error) {
+        showToast('Failed to toggle Playwright', 'error');
+        e.target.checked = !enable;
+        loadToolSettings();
+    }
+});
 
 // Telegram Settings
 async function loadTelegramSettings() {

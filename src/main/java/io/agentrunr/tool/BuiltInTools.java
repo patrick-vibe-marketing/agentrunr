@@ -3,6 +3,7 @@ package io.agentrunr.tool;
 import io.agentrunr.core.AgentContext;
 import io.agentrunr.core.AgentResult;
 import io.agentrunr.core.ToolRegistry;
+import io.agentrunr.setup.CredentialStore;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,6 +29,7 @@ public class BuiltInTools {
     private static final Logger log = LoggerFactory.getLogger(BuiltInTools.class);
 
     private final ToolRegistry toolRegistry;
+    private final CredentialStore credentialStore;
     private final PathValidator pathValidator;
 
     @Value("${agent.tools.shell-timeout-seconds:30}")
@@ -45,8 +47,9 @@ public class BuiltInTools {
     @Value("${agent.tools.brave-api-key:}")
     private String braveApiKey;
 
-    public BuiltInTools(ToolRegistry toolRegistry) {
+    public BuiltInTools(ToolRegistry toolRegistry, CredentialStore credentialStore) {
         this.toolRegistry = toolRegistry;
+        this.credentialStore = credentialStore;
         this.pathValidator = new PathValidator();
     }
 
@@ -216,8 +219,12 @@ public class BuiltInTools {
             return AgentResult.of("Error: 'query' is required.");
         }
 
-        if (braveApiKey != null && !braveApiKey.isBlank()) {
-            return searchViaBrave(query);
+        String resolvedKey = credentialStore.getApiKey("brave_api_key");
+        if (resolvedKey == null || resolvedKey.isBlank()) {
+            resolvedKey = braveApiKey;
+        }
+        if (resolvedKey != null && !resolvedKey.isBlank()) {
+            return searchViaBrave(query, resolvedKey);
         }
         return AgentResult.of("Web search unavailable: BRAVE_API_KEY not configured. Query was: " + query);
     }
@@ -257,7 +264,7 @@ public class BuiltInTools {
         }
     }
 
-    private AgentResult searchViaBrave(String query) {
+    private AgentResult searchViaBrave(String query, String apiKey) {
         try {
             String encodedQuery = java.net.URLEncoder.encode(query, java.nio.charset.StandardCharsets.UTF_8);
             String url = "https://api.search.brave.com/res/v1/web/search?q=" + encodedQuery + "&count=5";
@@ -269,7 +276,7 @@ public class BuiltInTools {
             var request = java.net.http.HttpRequest.newBuilder()
                     .uri(java.net.URI.create(url))
                     .header("Accept", "application/json")
-                    .header("X-Subscription-Token", braveApiKey)
+                    .header("X-Subscription-Token", apiKey)
                     .timeout(java.time.Duration.ofSeconds(10))
                     .GET()
                     .build();

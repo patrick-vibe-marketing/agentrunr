@@ -164,6 +164,32 @@
                     </div>
 
                     <div class="settings-section">
+                        <h3>Tools & Integrations</h3>
+                        <div class="setting-group">
+                            <label for="braveApiKeyInput">Web Search (Brave) API Key</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="password" id="braveApiKeyInput" placeholder="BSA..." style="flex: 1;">
+                                <span id="braveToolStatus" class="tool-status"></span>
+                            </div>
+                            <span class="help-text">Enables the web_search tool. Get a key at <a href="https://brave.com/search/api/" target="_blank">brave.com/search/api</a></span>
+                            <div style="margin-top: 8px;">
+                                <button id="saveBraveKeyBtn" class="btn-primary">Save Brave Key</button>
+                            </div>
+                        </div>
+                        <div class="setting-group" style="margin-top: 16px;">
+                            <label>Browser Automation (Playwright)</label>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="playwrightToggle">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span id="playwrightStatus" class="tool-status"></span>
+                            </div>
+                            <span class="help-text">Enables browser automation via Playwright MCP server (requires npx)</span>
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
                         <h3>Telegram Bot</h3>
                         <div class="setting-group">
                             <label for="telegramToken">Bot Token</label>

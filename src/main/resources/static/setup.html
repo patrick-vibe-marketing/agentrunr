@@ -116,6 +116,15 @@
             <div class="hint">Get yours at <a href="https://console.anthropic.com/" target="_blank">console.anthropic.com</a></div>
         </div>
 
+        <div class="setup-field">
+            <label>
+                Brave Search API Key
+                <span class="provider-status" id="braveSearchStatus"></span>
+            </label>
+            <input type="password" id="braveApiKey" placeholder="BSA...">
+            <div class="hint">Get yours at <a href="https://brave.com/search/api/" target="_blank">brave.com/search/api</a> — enables the web_search tool</div>
+        </div>
+
         <div class="setup-field" id="claudeCodeOauthField" style="border-top: 1px solid var(--border, #333); padding-top: 20px; margin-top: 8px;">
             <label>
                 Claude Code OAuth
@@ -139,6 +148,7 @@
                 const data = await res.json();
                 updateStatus('openaiStatus', data.providers.openai);
                 updateStatus('anthropicStatus', data.providers.anthropic);
+                updateStatus('braveSearchStatus', data.providers.braveSearch);
                 updateStatus('claudeCodeOauthStatus', data.providers.claudeCodeOauth);
             } catch (e) {
                 console.error('Failed to load status', e);
@@ -166,10 +176,12 @@
             const body = {};
             const openai = document.getElementById('openaiKey').value.trim();
             const anthropic = document.getElementById('anthropicKey').value.trim();
+            const brave = document.getElementById('braveApiKey').value.trim();
             if (openai) body.openai = openai;
             if (anthropic) body.anthropic = anthropic;
+            if (brave) body.braveApiKey = brave;
 
-            if (!openai && !anthropic) {
+            if (!openai && !anthropic && !brave) {
                 msg.textContent = 'Please enter at least one API key.';
                 msg.className = 'setup-message error';
                 btn.disabled = false;
@@ -190,6 +202,9 @@
                     msg.className = 'setup-message success';
                     updateStatus('openaiStatus', data.providers.openai);
                     updateStatus('anthropicStatus', data.providers.anthropic);
+                    if (data.providers.braveSearch !== undefined) {
+                        updateStatus('braveSearchStatus', data.providers.braveSearch);
+                    }
                     setTimeout(() => window.location.href = '/', 1500);
                 } else {
                     msg.textContent = 'Error: ' + (data.error || 'Unknown error');

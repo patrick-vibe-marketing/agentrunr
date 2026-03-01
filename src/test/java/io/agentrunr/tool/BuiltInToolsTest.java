@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.agentrunr.core.AgentContext;
 import io.agentrunr.core.AgentResult;
 import io.agentrunr.core.ToolRegistry;
+import io.agentrunr.setup.CredentialStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -14,6 +15,8 @@ import java.nio.file.Path;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class BuiltInToolsTest {
 
@@ -25,7 +28,9 @@ class BuiltInToolsTest {
     @BeforeEach
     void setUp() throws Exception {
         registry = new ToolRegistry(new ObjectMapper());
-        var tools = new BuiltInTools(registry);
+        var credentialStore = mock(CredentialStore.class);
+        when(credentialStore.getApiKey("brave_api_key")).thenReturn(null);
+        var tools = new BuiltInTools(registry, credentialStore);
 
         // Use reflection to set the @Value fields for testing
         setField(tools, "shellTimeoutSeconds", 5);

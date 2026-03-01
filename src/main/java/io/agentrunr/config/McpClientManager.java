@@ -150,6 +150,80 @@ public class McpClientManager {
         }
     }
 
+    /**
+     * Enables a configured (but disabled) MCP server at runtime.
+     * Connects the server and registers its tools.
+     */
+    public boolean enableServer(String name) {
+        ManagedServer existing = servers.get(name);
+        if (existing != null && existing.client != null) {
+            log.info("MCP server '{}' is already connected", name);
+            return true;
+        }
+
+        McpProperties.McpServerConfig config = getConfiguredServerByName(name);
+        if (config == null) {
+            log.warn("No configured MCP server found with name '{}'", name);
+            return false;
+        }
+
+        try {
+            McpSyncClient client = createClient(config);
+            List<String> toolNames = registerTools(name, client);
+            servers.put(name, new ManagedServer(name, client, config, false, toolNames));
+            log.info("Enabled MCP server '{}' ({} tools)", name, toolNames.size());
+            return true;
+        } catch (Exception e) {
+            log.error("Failed to enable MCP server '{}': {}", name, e.getMessage());
+            servers.put(name, new ManagedServer(name, null, config, false, List.of()));
+            return false;
+        }
+    }
+
+    /**
+     * Disables a running MCP server at runtime.
+     * Disconnects the server and unregisters its tools.
+     */
+    public boolean disableServer(String name) {
+        ManagedServer server = servers.get(name);
+        if (server == null) {
+            log.warn("MCP server '{}' not found", name);
+            return false;
+        }
+
+        // Unregister tools
+        if (!server.toolNames.isEmpty()) {
+            toolRegistry.unregisterFunctionCallbacks(server.toolNames);
+        }
+
+        closeClient(server);
+        // Keep the entry with null client so it shows as disabled
+        servers.put(name, new ManagedServer(
+                name, null, server.config, server.dynamic, List.of()));
+        log.info("Disabled MCP server '{}'", name);
+        return true;
+    }
+
+    /**
+     * Finds a configured MCP server by name from the application properties.
+     */
+    public McpProperties.McpServerConfig getConfiguredServerByName(String name) {
+        for (McpProperties.McpServerConfig config : mcpProperties.servers()) {
+            if (name.equals(config.name())) {
+                return config;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns true if the named server is connected.
+     */
+    public boolean isConnected(String name) {
+        ManagedServer server = servers.get(name);
+        return server != null && server.client != null;
+    }
+
     // --- Dynamic server management (via admin API) ---
 
     /**

@@ -42,12 +42,11 @@ agent:
         headers:
           Authorization: "Bearer ${HUBSPOT_MCP_TOKEN:}"
         enabled: ${HUBSPOT_MCP_ENABLED:false}
-      # Stdio transport example:
-      # - name: filesystem
-      #   transport: stdio
-      #   command: npx
-      #   args: ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"]
-      #   enabled: true
+      - name: playwright-browser
+        transport: stdio
+        command: npx
+        args: ["-y", "@playwright/mcp", "--headless"]
+        enabled: ${PLAYWRIGHT_ENABLED:false}
   name: Assistant
   model: gpt-4.1
   instructions: >

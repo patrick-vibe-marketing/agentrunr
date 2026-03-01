@@ -54,6 +54,24 @@ public class ToolRegistry {
     }
 
     /**
+     * Unregisters a function callback by name.
+     */
+    public void unregisterFunctionCallback(String name) {
+        functionCallbacks.remove(name);
+        log.debug("Unregistered function callback: {}", name);
+    }
+
+    /**
+     * Unregisters multiple function callbacks by name.
+     */
+    public void unregisterFunctionCallbacks(List<String> names) {
+        for (String name : names) {
+            functionCallbacks.remove(name);
+        }
+        log.debug("Unregistered {} function callbacks", names.size());
+    }
+
+    /**
      * Registers a custom agent tool (supports handoffs and context variable updates).
      * The tool will NOT be visible to the LLM unless registered with a description via
      * {@link #registerAgentTool(String, String, String, AgentTool)}.

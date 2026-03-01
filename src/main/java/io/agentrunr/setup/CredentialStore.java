@@ -69,6 +69,7 @@ public class CredentialStore {
             case "anthropic" -> getEnvOrNull("ANTHROPIC_API_KEY");
             case "telegram_token" -> getEnvOrNull("TELEGRAM_BOT_TOKEN");
             case "telegram_allowed_users" -> getEnvOrNull("TELEGRAM_ALLOWED_USERS");
+            case "brave_api_key" -> getEnvOrNull("BRAVE_API_KEY");
             default -> null;
         };
     }
@@ -112,12 +113,13 @@ public class CredentialStore {
     }
 
     public Map<String, Boolean> getProviderStatus() {
-        return Map.of(
-                "openai", getApiKey("openai") != null,
-                "anthropic", getApiKey("anthropic") != null,
-                "claudeCodeOauth", claudeCodeOAuthProvider.getAccessToken().isPresent(),
-                "telegram", getApiKey("telegram_token") != null
-        );
+        var status = new java.util.HashMap<String, Boolean>();
+        status.put("openai", getApiKey("openai") != null);
+        status.put("anthropic", getApiKey("anthropic") != null);
+        status.put("claudeCodeOauth", claudeCodeOAuthProvider.getAccessToken().isPresent());
+        status.put("telegram", getApiKey("telegram_token") != null);
+        status.put("braveSearch", getApiKey("brave_api_key") != null);
+        return status;
     }
 
     private void loadIfExists() {

@@ -236,6 +236,74 @@ public class AdminController {
         }
     }
 
+    /**
+     * Returns status of built-in tools and integrations.
+     */
+    @GetMapping("/settings/tools")
+    public ResponseEntity<Map<String, Object>> getToolSettings() {
+        Map<String, Object> tools = new HashMap<>();
+
+        // Web Search (Brave)
+        boolean braveConfigured = credentialStore.getApiKey("brave_api_key") != null;
+        tools.put("webSearch", Map.of(
+                "enabled", braveConfigured,
+                "configured", braveConfigured
+        ));
+
+        // Web Fetch (always available)
+        tools.put("webFetch", Map.of(
+                "enabled", true,
+                "configured", true
+        ));
+
+        // Browser (Playwright MCP)
+        boolean browserConfigured = mcpClientManager.getConfiguredServerByName("playwright-browser") != null;
+        boolean browserConnected = mcpClientManager.isConnected("playwright-browser");
+        tools.put("browser", Map.of(
+                "enabled", browserConnected,
+                "configured", browserConfigured
+        ));
+
+        return ResponseEntity.ok(tools);
+    }
+
+    /**
+     * Saves tool settings (brave key, playwright toggle).
+     */
+    @PutMapping("/settings/tools")
+    public ResponseEntity<Map<String, Object>> saveToolSettings(@RequestBody Map<String, Object> body) {
+        try {
+            // Handle Brave API key
+            if (body.containsKey("braveApiKey")) {
+                Object val = body.get("braveApiKey");
+                String key = val != null ? val.toString().trim() : "";
+                if (!key.isEmpty()) {
+                    credentialStore.setApiKey("brave_api_key", key);
+                } else {
+                    credentialStore.setApiKey("brave_api_key", null);
+                }
+                credentialStore.save();
+            }
+
+            // Handle Playwright toggle
+            if (body.containsKey("browser")) {
+                boolean enable = Boolean.TRUE.equals(body.get("browser"));
+                if (enable) {
+                    mcpClientManager.enableServer("playwright-browser");
+                } else {
+                    mcpClientManager.disableServer("playwright-browser");
+                }
+            }
+
+            return ResponseEntity.ok(Map.of("success", true));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()
+            ));
+        }
+    }
+
     private String maskToken(String token) {
         if (token == null || token.length() < 8) return "";
         return token.substring(0, 4) + "..." + token.substring(token.length() - 4);
