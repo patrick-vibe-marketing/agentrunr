@@ -9,6 +9,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import org.springframework.context.ConfigurableApplicationContext;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +32,8 @@ class BuiltInToolsTest {
         registry = new ToolRegistry(new ObjectMapper());
         var credentialStore = mock(CredentialStore.class);
         when(credentialStore.getApiKey("brave_api_key")).thenReturn(null);
-        var tools = new BuiltInTools(registry, credentialStore);
+        var appContext = mock(ConfigurableApplicationContext.class);
+        var tools = new BuiltInTools(registry, credentialStore, appContext);
 
         // Use reflection to set the @Value fields for testing
         setField(tools, "shellTimeoutSeconds", 5);

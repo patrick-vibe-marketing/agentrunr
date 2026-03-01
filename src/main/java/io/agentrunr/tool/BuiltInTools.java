@@ -9,6 +9,7 @@ import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ public class BuiltInTools {
 
     private final ToolRegistry toolRegistry;
     private final CredentialStore credentialStore;
+    private final ConfigurableApplicationContext applicationContext;
     private final PathValidator pathValidator;
 
     @Value("${agent.tools.shell-timeout-seconds:30}")
@@ -48,9 +50,11 @@ public class BuiltInTools {
     @Value("${agent.tools.brave-api-key:}")
     private String braveApiKey;
 
-    public BuiltInTools(ToolRegistry toolRegistry, CredentialStore credentialStore) {
+    public BuiltInTools(ToolRegistry toolRegistry, CredentialStore credentialStore,
+                        ConfigurableApplicationContext applicationContext) {
         this.toolRegistry = toolRegistry;
         this.credentialStore = credentialStore;
+        this.applicationContext = applicationContext;
         this.pathValidator = new PathValidator();
     }
 
@@ -272,7 +276,7 @@ public class BuiltInTools {
 
     private AgentResult restartApplication(Map<String, Object> args, AgentContext ctx) {
         log.info("Application restart requested via agent tool");
-        AdminController.scheduleShutdown();
+        AdminController.scheduleRestart(applicationContext);
         return AgentResult.of("Restarting AgentRunr... The application will be back shortly.");
     }
 

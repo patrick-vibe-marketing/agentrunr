@@ -1,5 +1,6 @@
 package io.agentrunr.channel;
 
+import io.agentrunr.AgentRunrApplication;
 import io.agentrunr.config.ClaudeCodeOAuthProvider;
 import io.agentrunr.config.McpClientManager;
 import io.agentrunr.config.ModelRouter;
@@ -13,6 +14,9 @@ import org.springframework.web.bind.annotation.*;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.context.ConfigurableApplicationContext;
 
 import java.io.IOException;
 
@@ -35,6 +39,7 @@ public class AdminController {
     private final ClaudeCodeOAuthProvider claudeCodeOAuthProvider;
     private final CredentialStore credentialStore;
     private final McpClientManager mcpClientManager;
+    private final ConfigurableApplicationContext applicationContext;
 
     public AdminController(
             ModelRouter modelRouter,
@@ -42,6 +47,7 @@ public class AdminController {
             Memory memory,
             CredentialStore credentialStore,
             McpClientManager mcpClientManager,
+            ConfigurableApplicationContext applicationContext,
             @Autowired(required = false) ClaudeCodeOAuthProvider claudeCodeOAuthProvider
     ) {
         this.modelRouter = modelRouter;
@@ -49,6 +55,7 @@ public class AdminController {
         this.memory = memory;
         this.credentialStore = credentialStore;
         this.mcpClientManager = mcpClientManager;
+        this.applicationContext = applicationContext;
         this.claudeCodeOAuthProvider = claudeCodeOAuthProvider;
     }
 
@@ -311,29 +318,32 @@ public class AdminController {
     }
 
     /**
-     * Triggers a graceful application restart.
-     * Returns 200 immediately, then exits after a short delay.
-     * Requires a process manager (systemd, Docker, wrapper script) to restart the process.
+     * Triggers a graceful in-process application restart.
+     * Returns 200 immediately, then closes the current context and starts a new one.
+     * No external process manager needed.
      */
     @PostMapping("/restart")
     public ResponseEntity<Map<String, Object>> restart() {
         log.info("Application restart requested via API");
-        scheduleShutdown();
+        scheduleRestart(applicationContext);
         return ResponseEntity.ok(Map.of("success", true, "message", "Restarting AgentRunr..."));
     }
 
-    public static void scheduleShutdown() {
-        Thread shutdownThread = new Thread(() -> {
+    public static void scheduleRestart(ConfigurableApplicationContext context) {
+        Thread restartThread = new Thread(() -> {
             try {
                 Thread.sleep(1500);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                return;
             }
-            log.info("Shutting down for restart...");
-            System.exit(0);
+            log.info("Closing context for restart...");
+            context.close();
+            log.info("Starting new application context...");
+            SpringApplication.run(AgentRunrApplication.class, AgentRunrApplication.getSavedArgs());
         }, "agentrunr-restart");
-        shutdownThread.setDaemon(true);
-        shutdownThread.start();
+        restartThread.setDaemon(false);
+        restartThread.start();
     }
 
     private String maskToken(String token) {

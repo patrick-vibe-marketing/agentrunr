@@ -10,7 +10,14 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class AgentRunrApplication {
 
+    private static String[] savedArgs = {};
+
+    public static String[] getSavedArgs() {
+        return savedArgs.clone();
+    }
+
     public static void main(String[] args) {
+        savedArgs = args.clone();
         SpringApplication.run(AgentRunrApplication.class, args);
     }
 }
